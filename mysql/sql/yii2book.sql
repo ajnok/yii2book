@@ -5,19 +5,19 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
 -- -----------------------------------------------------
--- Schema mydb
+-- Schema mybook
 -- -----------------------------------------------------
 
 -- -----------------------------------------------------
--- Schema mydb
+-- Schema mybook
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
-USE `mydb` ;
+CREATE SCHEMA IF NOT EXISTS `mybook` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
+USE `mybook` ;
 
 -- -----------------------------------------------------
--- Table `mydb`.`city`
+-- Table `mybook`.`city`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`city` (
+CREATE TABLE IF NOT EXISTS `mybook`.`city` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `created_at` DATETIME NULL,
@@ -28,9 +28,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`publisher`
+-- Table `mybook`.`publisher`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`publisher` (
+CREATE TABLE IF NOT EXISTS `mybook`.`publisher` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
   `city_id` INT(11) UNSIGNED NULL,
@@ -41,16 +41,16 @@ CREATE TABLE IF NOT EXISTS `mydb`.`publisher` (
   INDEX `fk_publisher_city1_idx` (`city_id` ASC),
   CONSTRAINT `fk_publisher_city`
     FOREIGN KEY (`city_id`)
-    REFERENCES `mydb`.`city` (`id`)
+    REFERENCES `mybook`.`city` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`book`
+-- Table `mybook`.`book`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`book` (
+CREATE TABLE IF NOT EXISTS `mybook`.`book` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `title_th` VARCHAR(100) NULL,
   `title_en` VARCHAR(100) NULL,
@@ -66,16 +66,16 @@ CREATE TABLE IF NOT EXISTS `mydb`.`book` (
   INDEX `fk_book_publisher1_idx` (`publisher_id` ASC),
   CONSTRAINT `fk_book_publisher`
     FOREIGN KEY (`publisher_id`)
-    REFERENCES `mydb`.`publisher` (`id`)
+    REFERENCES `mybook`.`publisher` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`author`
+-- Table `mybook`.`author`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`author` (
+CREATE TABLE IF NOT EXISTS `mybook`.`author` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `firstname` VARCHAR(45) NOT NULL,
   `middlename` VARCHAR(45) NULL,
@@ -87,9 +87,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`book_author`
+-- Table `mybook`.`book_author`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`book_author` (
+CREATE TABLE IF NOT EXISTS `mybook`.`book_author` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `book_id` INT(11) UNSIGNED NOT NULL,
   `author_id` INT(11) UNSIGNED NOT NULL,
@@ -98,21 +98,21 @@ CREATE TABLE IF NOT EXISTS `mydb`.`book_author` (
   INDEX `fk_book_author_author1_idx` (`author_id` ASC),
   CONSTRAINT `fk_book_author_book`
     FOREIGN KEY (`book_id`)
-    REFERENCES `mydb`.`book` (`id`)
+    REFERENCES `mybook`.`book` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_book_author_author`
     FOREIGN KEY (`author_id`)
-    REFERENCES `mydb`.`author` (`id`)
+    REFERENCES `mybook`.`author` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`filetype`
+-- Table `mybook`.`filetype`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`filetype` (
+CREATE TABLE IF NOT EXISTS `mybook`.`filetype` (
   `id` SMALLINT(6) UNSIGNED NOT NULL AUTO_INCREMENT,
   `extension` VARCHAR(10) NOT NULL,
   `description` VARCHAR(45) NULL DEFAULT NULL,
@@ -123,9 +123,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`book_filetype`
+-- Table `mybook`.`book_filetype`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`book_filetype` (
+CREATE TABLE IF NOT EXISTS `mybook`.`book_filetype` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `filename_original` VARCHAR(45) NOT NULL,
   `filename_system` VARCHAR(45) NOT NULL,
@@ -136,21 +136,21 @@ CREATE TABLE IF NOT EXISTS `mydb`.`book_filetype` (
   INDEX `fk_book_filetype_filetype1_idx` (`filetype_id` ASC),
   CONSTRAINT `fk_book_filetype_book`
     FOREIGN KEY (`book_id`)
-    REFERENCES `mydb`.`book` (`id`)
+    REFERENCES `mybook`.`book` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_book_filetype_filetype`
     FOREIGN KEY (`filetype_id`)
-    REFERENCES `mydb`.`filetype` (`id`)
+    REFERENCES `mybook`.`filetype` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`series_book`
+-- Table `mybook`.`series_book`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`series_book` (
+CREATE TABLE IF NOT EXISTS `mybook`.`series_book` (
   `id` INT(11) UNSIGNED NOT NULL,
   `title_th` VARCHAR(100) NULL,
   `title_en` VARCHAR(100) NULL,
@@ -165,9 +165,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`tag`
+-- Table `mybook`.`tag`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`tag` (
+CREATE TABLE IF NOT EXISTS `mybook`.`tag` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `created_at` DATETIME NULL,
@@ -178,9 +178,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`tag_book`
+-- Table `mybook`.`tag_book`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`tag_book` (
+CREATE TABLE IF NOT EXISTS `mybook`.`tag_book` (
   `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `tag_id` INT(11) UNSIGNED NOT NULL,
   `book_id` INT(11) UNSIGNED NOT NULL,
@@ -189,12 +189,12 @@ CREATE TABLE IF NOT EXISTS `mydb`.`tag_book` (
   INDEX `fk_tag_book_book1_idx` (`book_id` ASC),
   CONSTRAINT `fk_tag_book_tag`
     FOREIGN KEY (`tag_id`)
-    REFERENCES `mydb`.`tag` (`id`)
+    REFERENCES `mybook`.`tag` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_tag_book_book`
     FOREIGN KEY (`book_id`)
-    REFERENCES `mydb`.`book` (`id`)
+    REFERENCES `mybook`.`book` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
