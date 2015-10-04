@@ -88,22 +88,6 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
     }
 
     /**
-     * Get the value of $parameter.
-     *
-     * @param string $parameter
-     *
-     * @return string
-     */
-    public function getParameter($parameter)
-    {
-        $params = $this->getParameters();
-
-        return array_key_exists($parameter, $params)
-            ? $params[$parameter]
-            : null;
-    }
-
-    /**
      * Set an associative array of parameter names mapped to values.
      *
      * @param string[] $parameters
@@ -125,6 +109,22 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
     }
 
     /**
+     * Get the value of $parameter.
+     *
+     * @param string $parameter
+     *
+     * @return string
+     */
+    public function getParameter($parameter)
+    {
+        $params = $this->getParameters();
+
+        return array_key_exists($parameter, $params)
+            ? $params[$parameter]
+            : null;
+    }
+
+    /**
      * Get the value of this header prepared for rendering.
      *
      * @return string
@@ -140,34 +140,6 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
         }
 
         return $body;
-    }
-
-    /**
-     * Generate a list of all tokens in the final header.
-     *
-     * This doesn't need to be overridden in theory, but it is for implementation
-     * reasons to prevent potential breakage of attributes.
-     *
-     * @param string $string The string to tokenize
-     *
-     * @return array An array of tokens as strings
-     */
-    protected function toTokens($string = null)
-    {
-        $tokens = parent::toTokens(parent::getFieldBody());
-
-        // Try creating any parameters
-        foreach ($this->_params as $name => $value) {
-            if (!is_null($value)) {
-                // Add the semi-colon separator
-                $tokens[count($tokens) - 1] .= ';';
-                $tokens = array_merge($tokens, $this->generateTokenLines(
-                    ' '.$this->_createParameter($name, $value)
-                    ));
-            }
-        }
-
-        return $tokens;
     }
 
     /**
@@ -256,5 +228,33 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
         }
 
         return $prepend.$value;
+    }
+
+    /**
+     * Generate a list of all tokens in the final header.
+     *
+     * This doesn't need to be overridden in theory, but it is for implementation
+     * reasons to prevent potential breakage of attributes.
+     *
+     * @param string $string The string to tokenize
+     *
+     * @return array An array of tokens as strings
+     */
+    protected function toTokens($string = null)
+    {
+        $tokens = parent::toTokens(parent::getFieldBody());
+
+        // Try creating any parameters
+        foreach ($this->_params as $name => $value) {
+            if (!is_null($value)) {
+                // Add the semi-colon separator
+                $tokens[count($tokens) - 1] .= ';';
+                $tokens = array_merge($tokens, $this->generateTokenLines(
+                    ' '.$this->_createParameter($name, $value)
+                    ));
+            }
+        }
+
+        return $tokens;
     }
 }

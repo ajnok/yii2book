@@ -11,13 +11,6 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
         parent::setUp();
     }
 
-    public function assertCleanUTF8($string, $expect = null)
-    {
-        if ($expect === null) $expect = $string;
-        $this->assertIdentical(HTMLPurifier_Encoder::cleanUTF8($string), $expect, 'iconv: %s');
-        $this->assertIdentical(HTMLPurifier_Encoder::cleanUTF8($string, true), $expect, 'PHP: %s');
-    }
-
     public function test_cleanUTF8()
     {
         $this->assertCleanUTF8('Normal string.');
@@ -30,6 +23,13 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
         $this->assertCleanUTF8("\xDF\xFF", ''); // malformed UTF8
         // invalid codepoints
         $this->assertCleanUTF8("\xED\xB0\x80", '');
+    }
+
+    public function assertCleanUTF8($string, $expect = null)
+    {
+        if ($expect === null) $expect = $string;
+        $this->assertIdentical(HTMLPurifier_Encoder::cleanUTF8($string), $expect, 'iconv: %s');
+        $this->assertIdentical(HTMLPurifier_Encoder::cleanUTF8($string, true), $expect, 'PHP: %s');
     }
 
     public function test_convertToUTF8_noConvert()
@@ -73,11 +73,6 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
 
     }
 
-    public function getZhongWen()
-    {
-        return "\xE4\xB8\xAD\xE6\x96\x87 (Chinese)";
-    }
-
     public function test_convertFromUTF8_utf8()
     {
         // UTF-8 means that we don't touch it
@@ -105,6 +100,11 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
             HTMLPurifier_Encoder::convertFromUTF8($this->getZhongWen(), $this->config, $this->context),
             " (Chinese)"
         );
+    }
+
+    public function getZhongWen()
+    {
+        return "\xE4\xB8\xAD\xE6\x96\x87 (Chinese)";
     }
 
     public function test_convertFromUTF8_phpNormal()
@@ -171,6 +171,16 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
 
     }
 
+    public function test_testEncodingSupportsASCII()
+    {
+        if (HTMLPurifier_Encoder::iconvAvailable()) {
+            $this->assertASCIISupportCheck('Shift_JIS', array("\xC2\xA5" => '\\', "\xE2\x80\xBE" => '~'));
+            $this->assertASCIISupportCheck('JOHAB', array("\xE2\x82\xA9" => '\\'));
+        }
+        $this->assertASCIISupportCheck('ISO-8859-1', array());
+        $this->assertASCIISupportCheck('dontexist', array()); // canary
+    }
+
     public function assertASCIISupportCheck($enc, $ret)
     {
         $test = HTMLPurifier_Encoder::testEncodingSupportsASCII($enc, true);
@@ -183,16 +193,6 @@ class HTMLPurifier_EncoderTest extends HTMLPurifier_Harness
             HTMLPurifier_Encoder::testEncodingSupportsASCII($enc, true),
             $ret
         );
-    }
-
-    public function test_testEncodingSupportsASCII()
-    {
-        if (HTMLPurifier_Encoder::iconvAvailable()) {
-            $this->assertASCIISupportCheck('Shift_JIS', array("\xC2\xA5" => '\\', "\xE2\x80\xBE" => '~'));
-            $this->assertASCIISupportCheck('JOHAB', array("\xE2\x82\xA9" => '\\'));
-        }
-        $this->assertASCIISupportCheck('ISO-8859-1', array());
-        $this->assertASCIISupportCheck('dontexist', array()); // canary
     }
 
     public function testShiftJIS()

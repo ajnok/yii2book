@@ -115,15 +115,6 @@ class HTMLPurifier_ComplexHarness extends HTMLPurifier_Harness
     }
 
     /**
-     * Generate textual HTML from tokens
-     */
-    protected function generate($tokens)
-    {
-        $generator = new HTMLPurifier_Generator($this->config, $this->context);
-        return $generator->generateFromTokens($tokens);
-    }
-
-    /**
      * Generate tokens from node list
      */
     protected function generateTokens($children)
@@ -131,6 +122,15 @@ class HTMLPurifier_ComplexHarness extends HTMLPurifier_Harness
         $dummy = new HTMLPurifier_Node_Element("dummy");
         $dummy->children = $children;
         return HTMLPurifier_Arborize::flatten($dummy, $this->context, $this->config);
+    }
+
+    /**
+     * Generate textual HTML from tokens
+     */
+    protected function generate($tokens)
+    {
+        $generator = new HTMLPurifier_Generator($this->config, $this->context);
+        return $generator->generateFromTokens($tokens);
     }
 
 }

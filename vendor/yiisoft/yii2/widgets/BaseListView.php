@@ -93,13 +93,6 @@ abstract class BaseListView extends Widget
      */
     public $layout = "{summary}\n{items}\n{pager}";
 
-
-    /**
-     * Renders the data models.
-     * @return string the rendering result.
-     */
-    abstract public function renderItems();
-
     /**
      * Initializes the view.
      */
@@ -159,18 +152,6 @@ abstract class BaseListView extends Widget
     }
 
     /**
-     * Renders the HTML content indicating that the list view has no data.
-     * @return string the rendering result
-     * @see emptyText
-     */
-    public function renderEmpty()
-    {
-        $options = $this->emptyTextOptions;
-        $tag = ArrayHelper::remove($options, 'tag', 'div');
-        return Html::tag($tag, ($this->emptyText === null ? Yii::t('yii', 'No results found.') : $this->emptyText), $options);
-    }
-
-    /**
      * Renders the summary text.
      */
     public function renderSummary()
@@ -226,6 +207,12 @@ abstract class BaseListView extends Widget
     }
 
     /**
+     * Renders the data models.
+     * @return string the rendering result.
+     */
+    abstract public function renderItems();
+
+    /**
      * Renders the pager.
      * @return string the rendering result
      */
@@ -261,5 +248,17 @@ abstract class BaseListView extends Widget
         $sorter['view'] = $this->getView();
 
         return $class::widget($sorter);
+    }
+
+    /**
+     * Renders the HTML content indicating that the list view has no data.
+     * @return string the rendering result
+     * @see emptyText
+     */
+    public function renderEmpty()
+    {
+        $options = $this->emptyTextOptions;
+        $tag = ArrayHelper::remove($options, 'tag', 'div');
+        return Html::tag($tag, ($this->emptyText === null ? Yii::t('yii', 'No results found.') : $this->emptyText), $options);
     }
 }

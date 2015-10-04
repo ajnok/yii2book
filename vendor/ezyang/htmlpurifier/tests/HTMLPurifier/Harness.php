@@ -6,25 +6,23 @@
 class HTMLPurifier_Harness extends UnitTestCase
 {
 
-    public function __construct($name = null)
-    {
-        parent::__construct($name);
-    }
-
     /**
      * @type HTMLPurifier_Config
      */
     protected $config;
-
     /**
      * @type HTMLPurifier_Context
      */
     protected $context;
-
     /**
      * @type HTMLPurifier
      */
     protected $purifier;
+
+    public function __construct($name = null)
+    {
+        parent::__construct($name);
+    }
 
     /**
      * Generates easily accessible default config/context, as well as
@@ -36,6 +34,15 @@ class HTMLPurifier_Harness extends UnitTestCase
         $this->config->set('Output.Newline', '
 ');
         $this->purifier = new HTMLPurifier();
+    }
+
+    /**
+     * Generates default configuration and context objects
+     * @return Defaults in form of array($config, $context)
+     */
+    protected function createCommon()
+    {
+        return array(HTMLPurifier_Config::createDefault(), new HTMLPurifier_Context);
     }
 
     /**
@@ -52,6 +59,17 @@ class HTMLPurifier_Harness extends UnitTestCase
         $this->assertIdentical($expect, $result);
     }
 
+    public function getTests()
+    {
+        // __onlytest makes only one test get triggered
+        foreach (get_class_methods(get_class($this)) as $method) {
+            if (strtolower(substr($method, 0, 10)) == '__onlytest') {
+                $this->reporter->paintSkip('All test methods besides ' . $method);
+                return array($method);
+            }
+        }
+        return parent::getTests();
+    }
 
     /**
      * Accepts config and context and prepares them into a valid state
@@ -64,15 +82,6 @@ class HTMLPurifier_Harness extends UnitTestCase
         if (!$context) {
             $context = new HTMLPurifier_Context();
         }
-    }
-
-    /**
-     * Generates default configuration and context objects
-     * @return Defaults in form of array($config, $context)
-     */
-    protected function createCommon()
-    {
-        return array(HTMLPurifier_Config::createDefault(), new HTMLPurifier_Context);
     }
 
     /**
@@ -98,18 +107,6 @@ class HTMLPurifier_Harness extends UnitTestCase
             $this->assertTrue($status, 'Expected true result, got false');
             $this->assertIdentical($result, $expect);
         }
-    }
-
-    public function getTests()
-    {
-        // __onlytest makes only one test get triggered
-        foreach (get_class_methods(get_class($this)) as $method) {
-            if (strtolower(substr($method, 0, 10)) == '__onlytest') {
-                $this->reporter->paintSkip('All test methods besides ' . $method);
-                return array($method);
-            }
-        }
-        return parent::getTests();
     }
 
 }

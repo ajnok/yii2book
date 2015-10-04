@@ -125,41 +125,6 @@ class DetailView extends Widget
     }
 
     /**
-     * Renders the detail view.
-     * This is the main entry of the whole detail view rendering.
-     */
-    public function run()
-    {
-        $rows = [];
-        $i = 0;
-        foreach ($this->attributes as $attribute) {
-            $rows[] = $this->renderAttribute($attribute, $i++);
-        }
-
-        $options = $this->options;
-        $tag = ArrayHelper::remove($options, 'tag', 'table');
-        echo Html::tag($tag, implode("\n", $rows), $options);
-    }
-
-    /**
-     * Renders a single attribute.
-     * @param array $attribute the specification of the attribute to be rendered.
-     * @param integer $index the zero-based index of the attribute in the [[attributes]] array
-     * @return string the rendering result
-     */
-    protected function renderAttribute($attribute, $index)
-    {
-        if (is_string($this->template)) {
-            return strtr($this->template, [
-                '{label}' => $attribute['label'],
-                '{value}' => $this->formatter->format($attribute['value'], $attribute['format']),
-            ]);
-        } else {
-            return call_user_func($this->template, $attribute, $index, $this);
-        }
-    }
-
-    /**
      * Normalizes the attribute specifications.
      * @throws InvalidConfigException
      */
@@ -215,6 +180,41 @@ class DetailView extends Widget
             }
 
             $this->attributes[$i] = $attribute;
+        }
+    }
+
+    /**
+     * Renders the detail view.
+     * This is the main entry of the whole detail view rendering.
+     */
+    public function run()
+    {
+        $rows = [];
+        $i = 0;
+        foreach ($this->attributes as $attribute) {
+            $rows[] = $this->renderAttribute($attribute, $i++);
+        }
+
+        $options = $this->options;
+        $tag = ArrayHelper::remove($options, 'tag', 'table');
+        echo Html::tag($tag, implode("\n", $rows), $options);
+    }
+
+    /**
+     * Renders a single attribute.
+     * @param array $attribute the specification of the attribute to be rendered.
+     * @param integer $index the zero-based index of the attribute in the [[attributes]] array
+     * @return string the rendering result
+     */
+    protected function renderAttribute($attribute, $index)
+    {
+        if (is_string($this->template)) {
+            return strtr($this->template, [
+                '{label}' => $attribute['label'],
+                '{value}' => $this->formatter->format($attribute['value'], $attribute['format']),
+            ]);
+        } else {
+            return call_user_func($this->template, $attribute, $index, $this);
         }
     }
 }

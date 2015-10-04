@@ -75,21 +75,6 @@ class ServiceLocator extends Component
     }
 
     /**
-     * Checks if a property value is null.
-     * This method overrides the parent implementation by checking if the named component is loaded.
-     * @param string $name the property name or the event name
-     * @return boolean whether the property value is null
-     */
-    public function __isset($name)
-    {
-        if ($this->has($name, true)) {
-            return true;
-        } else {
-            return parent::__isset($name);
-        }
-    }
-
-    /**
      * Returns a value indicating whether the locator has the specified component definition or has instantiated the component.
      * This method may return different results depending on the value of `$checkInstance`.
      *
@@ -136,6 +121,74 @@ class ServiceLocator extends Component
             throw new InvalidConfigException("Unknown component ID: $id");
         } else {
             return null;
+        }
+    }
+
+    /**
+     * Checks if a property value is null.
+     * This method overrides the parent implementation by checking if the named component is loaded.
+     * @param string $name the property name or the event name
+     * @return boolean whether the property value is null
+     */
+    public function __isset($name)
+    {
+        if ($this->has($name, true)) {
+            return true;
+        } else {
+            return parent::__isset($name);
+        }
+    }
+
+    /**
+     * Removes the component from the locator.
+     * @param string $id the component ID
+     */
+    public function clear($id)
+    {
+        unset($this->_definitions[$id], $this->_components[$id]);
+    }
+
+    /**
+     * Returns the list of the component definitions or the loaded component instances.
+     * @param boolean $returnDefinitions whether to return component definitions instead of the loaded component instances.
+     * @return array the list of the component definitions or the loaded component instances (ID => definition or instance).
+     */
+    public function getComponents($returnDefinitions = true)
+    {
+        return $returnDefinitions ? $this->_definitions : $this->_components;
+    }
+
+    /**
+     * Registers a set of component definitions in this locator.
+     *
+     * This is the bulk version of [[set()]]. The parameter should be an array
+     * whose keys are component IDs and values the corresponding component definitions.
+     *
+     * For more details on how to specify component IDs and definitions, please refer to [[set()]].
+     *
+     * If a component definition with the same ID already exists, it will be overwritten.
+     *
+     * The following is an example for registering two component definitions:
+     *
+     * ```php
+     * [
+     *     'db' => [
+     *         'class' => 'yii\db\Connection',
+     *         'dsn' => 'sqlite:path/to/file.db',
+     *     ],
+     *     'cache' => [
+     *         'class' => 'yii\caching\DbCache',
+     *         'db' => 'db',
+     *     ],
+     * ]
+     * ```
+     *
+     * @param array $components component definitions or instances
+     */
+    public function setComponents($components)
+    {
+        foreach ($components as $id => $component) {
+            $this->set($id, $component);
         }
     }
 
@@ -203,59 +256,6 @@ class ServiceLocator extends Component
             }
         } else {
             throw new InvalidConfigException("Unexpected configuration type for the \"$id\" component: " . gettype($definition));
-        }
-    }
-
-    /**
-     * Removes the component from the locator.
-     * @param string $id the component ID
-     */
-    public function clear($id)
-    {
-        unset($this->_definitions[$id], $this->_components[$id]);
-    }
-
-    /**
-     * Returns the list of the component definitions or the loaded component instances.
-     * @param boolean $returnDefinitions whether to return component definitions instead of the loaded component instances.
-     * @return array the list of the component definitions or the loaded component instances (ID => definition or instance).
-     */
-    public function getComponents($returnDefinitions = true)
-    {
-        return $returnDefinitions ? $this->_definitions : $this->_components;
-    }
-
-    /**
-     * Registers a set of component definitions in this locator.
-     *
-     * This is the bulk version of [[set()]]. The parameter should be an array
-     * whose keys are component IDs and values the corresponding component definitions.
-     *
-     * For more details on how to specify component IDs and definitions, please refer to [[set()]].
-     *
-     * If a component definition with the same ID already exists, it will be overwritten.
-     *
-     * The following is an example for registering two component definitions:
-     *
-     * ```php
-     * [
-     *     'db' => [
-     *         'class' => 'yii\db\Connection',
-     *         'dsn' => 'sqlite:path/to/file.db',
-     *     ],
-     *     'cache' => [
-     *         'class' => 'yii\caching\DbCache',
-     *         'db' => 'db',
-     *     ],
-     * ]
-     * ```
-     *
-     * @param array $components component definitions or instances
-     */
-    public function setComponents($components)
-    {
-        foreach ($components as $id => $component) {
-            $this->set($id, $component);
         }
     }
 }

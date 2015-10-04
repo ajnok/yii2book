@@ -202,45 +202,6 @@ class DateValidator extends Validator
     }
 
     /**
-     * @inheritdoc
-     */
-    public function validateAttribute($model, $attribute)
-    {
-        $value = $model->$attribute;
-        $timestamp = $this->parseDateValue($value);
-        if ($timestamp === false) {
-            $this->addError($model, $attribute, $this->message, []);
-        } elseif ($this->min !== null && $timestamp < $this->min) {
-            $this->addError($model, $attribute, $this->tooSmall, ['min' => $this->minString]);
-        } elseif ($this->max !== null && $timestamp > $this->max) {
-            $this->addError($model, $attribute, $this->tooBig, ['max' => $this->maxString]);
-        } elseif ($this->timestampAttribute !== null) {
-            if ($this->timestampAttributeFormat === null) {
-                $model->{$this->timestampAttribute} = $timestamp;
-            } else {
-                $model->{$this->timestampAttribute} = $this->formatTimestamp($timestamp, $this->timestampAttributeFormat);
-            }
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function validateValue($value)
-    {
-        $timestamp = $this->parseDateValue($value);
-        if ($timestamp === false) {
-            return [$this->message, []];
-        } elseif ($this->min !== null && $timestamp < $this->min) {
-            return [$this->tooSmall, ['min' => $this->minString]];
-        } elseif ($this->max !== null && $timestamp > $this->max) {
-            return [$this->tooBig, ['max' => $this->maxString]];
-        } else {
-            return null;
-        }
-    }
-
-    /**
      * Parses date string into UNIX timestamp
      *
      * @param string $value string representing date
@@ -318,6 +279,28 @@ class DateValidator extends Validator
     }
 
     /**
+     * @inheritdoc
+     */
+    public function validateAttribute($model, $attribute)
+    {
+        $value = $model->$attribute;
+        $timestamp = $this->parseDateValue($value);
+        if ($timestamp === false) {
+            $this->addError($model, $attribute, $this->message, []);
+        } elseif ($this->min !== null && $timestamp < $this->min) {
+            $this->addError($model, $attribute, $this->tooSmall, ['min' => $this->minString]);
+        } elseif ($this->max !== null && $timestamp > $this->max) {
+            $this->addError($model, $attribute, $this->tooBig, ['max' => $this->maxString]);
+        } elseif ($this->timestampAttribute !== null) {
+            if ($this->timestampAttributeFormat === null) {
+                $model->{$this->timestampAttribute} = $timestamp;
+            } else {
+                $model->{$this->timestampAttribute} = $this->formatTimestamp($timestamp, $this->timestampAttributeFormat);
+            }
+        }
+    }
+
+    /**
      * Formats a timestamp using the specified format
      * @param integer $timestamp
      * @param string $format
@@ -335,5 +318,22 @@ class DateValidator extends Validator
         $date->setTimestamp($timestamp);
         $date->setTimezone(new \DateTimeZone($this->timestampAttributeTimeZone));
         return $date->format($format);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        $timestamp = $this->parseDateValue($value);
+        if ($timestamp === false) {
+            return [$this->message, []];
+        } elseif ($this->min !== null && $timestamp < $this->min) {
+            return [$this->tooSmall, ['min' => $this->minString]];
+        } elseif ($this->max !== null && $timestamp > $this->max) {
+            return [$this->tooBig, ['max' => $this->maxString]];
+        } else {
+            return null;
+        }
     }
 }

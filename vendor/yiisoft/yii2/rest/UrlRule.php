@@ -162,6 +162,47 @@ class UrlRule extends CompositeUrlRule
     /**
      * @inheritdoc
      */
+    public function parseRequest($manager, $request)
+    {
+        $pathInfo = $request->getPathInfo();
+        foreach ($this->rules as $urlName => $rules) {
+            if (strpos($pathInfo, $urlName) !== false) {
+                foreach ($rules as $rule) {
+                    /* @var $rule \yii\web\UrlRule */
+                    if (($result = $rule->parseRequest($manager, $request)) !== false) {
+                        Yii::trace("Request parsed with URL rule: {$rule->name}", __METHOD__);
+
+                        return $result;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createUrl($manager, $route, $params)
+    {
+        foreach ($this->controller as $urlName => $controller) {
+            if (strpos($route, $controller) !== false) {
+                foreach ($this->rules[$urlName] as $rule) {
+                    /* @var $rule \yii\web\UrlRule */
+                    if (($url = $rule->createUrl($manager, $route, $params)) !== false) {
+                        return $url;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function createRules()
     {
         $only = array_flip($this->only);
@@ -207,46 +248,5 @@ class UrlRule extends CompositeUrlRule
         $config['suffix'] = $this->suffix;
 
         return Yii::createObject($config);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function parseRequest($manager, $request)
-    {
-        $pathInfo = $request->getPathInfo();
-        foreach ($this->rules as $urlName => $rules) {
-            if (strpos($pathInfo, $urlName) !== false) {
-                foreach ($rules as $rule) {
-                    /* @var $rule \yii\web\UrlRule */
-                    if (($result = $rule->parseRequest($manager, $request)) !== false) {
-                        Yii::trace("Request parsed with URL rule: {$rule->name}", __METHOD__);
-
-                        return $result;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function createUrl($manager, $route, $params)
-    {
-        foreach ($this->controller as $urlName => $controller) {
-            if (strpos($route, $controller) !== false) {
-                foreach ($this->rules[$urlName] as $rule) {
-                    /* @var $rule \yii\web\UrlRule */
-                    if (($url = $rule->createUrl($manager, $route, $params)) !== false) {
-                        return $url;
-                    }
-                }
-            }
-        }
-
-        return false;
     }
 }

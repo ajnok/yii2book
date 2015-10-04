@@ -21,6 +21,11 @@ class HTMLPurifier_Filter_ExtractStyleBlocksTest extends HTMLPurifier_Harness
         );
     }
 
+    public function test_extractStyleBlocks_preserve()
+    {
+        $this->assertExtractStyleBlocks('Foobar');
+    }
+
     public function assertExtractStyleBlocks($html, $expect = true, $styles = array())
     {
         $filter = new HTMLPurifier_Filter_ExtractStyleBlocks(); // disable cleaning
@@ -29,11 +34,6 @@ class HTMLPurifier_Filter_ExtractStyleBlocksTest extends HTMLPurifier_Harness
         $result = $filter->preFilter($html, $this->config, $this->context);
         $this->assertIdentical($result, $expect);
         $this->assertIdentical($this->context->get('StyleBlocks'), $styles);
-    }
-
-    public function test_extractStyleBlocks_preserve()
-    {
-        $this->assertExtractStyleBlocks('Foobar');
     }
 
     public function test_extractStyleBlocks_allStyle()
@@ -68,6 +68,11 @@ class HTMLPurifier_Filter_ExtractStyleBlocksTest extends HTMLPurifier_Harness
         );
     }
 
+    public function test_cleanCSS_malformed()
+    {
+        $this->assertCleanCSS('</style>', '');
+    }
+
     public function assertCleanCSS($input, $expect = true)
     {
         $filter = new HTMLPurifier_Filter_ExtractStyleBlocks();
@@ -76,11 +81,6 @@ class HTMLPurifier_Filter_ExtractStyleBlocksTest extends HTMLPurifier_Harness
         $this->normalize($expect);
         $result = $filter->cleanCSS($input, $this->config, $this->context);
         $this->assertIdentical($result, $expect);
-    }
-
-    public function test_cleanCSS_malformed()
-    {
-        $this->assertCleanCSS('</style>', '');
     }
 
     public function test_cleanCSS_selector()

@@ -43,66 +43,6 @@ abstract class BaseDataProvider extends Component implements DataProviderInterfa
     private $_models;
     private $_totalCount;
 
-
-    /**
-     * Prepares the data models that will be made available in the current page.
-     * @return array the available data models
-     */
-    abstract protected function prepareModels();
-
-    /**
-     * Prepares the keys associated with the currently available data models.
-     * @param array $models the available data models
-     * @return array the keys
-     */
-    abstract protected function prepareKeys($models);
-
-    /**
-     * Returns a value indicating the total number of data models in this data provider.
-     * @return integer total number of data models in this data provider.
-     */
-    abstract protected function prepareTotalCount();
-
-    /**
-     * Prepares the data models and keys.
-     *
-     * This method will prepare the data models and keys that can be retrieved via
-     * [[getModels()]] and [[getKeys()]].
-     *
-     * This method will be implicitly called by [[getModels()]] and [[getKeys()]] if it has not been called before.
-     *
-     * @param boolean $forcePrepare whether to force data preparation even if it has been done before.
-     */
-    public function prepare($forcePrepare = false)
-    {
-        if ($forcePrepare || $this->_models === null) {
-            $this->_models = $this->prepareModels();
-        }
-        if ($forcePrepare || $this->_keys === null) {
-            $this->_keys = $this->prepareKeys($this->_models);
-        }
-    }
-
-    /**
-     * Returns the data models in the current page.
-     * @return array the list of data models in the current page.
-     */
-    public function getModels()
-    {
-        $this->prepare();
-
-        return $this->_models;
-    }
-
-    /**
-     * Sets the data models in the current page.
-     * @param array $models the models in the current page
-     */
-    public function setModels($models)
-    {
-        $this->_models = $models;
-    }
-
     /**
      * Returns the key values associated with the data models.
      * @return array the list of key values corresponding to [[models]]. Each data model in [[models]]
@@ -125,13 +65,37 @@ abstract class BaseDataProvider extends Component implements DataProviderInterfa
     }
 
     /**
-     * Returns the number of data models in the current page.
-     * @return integer the number of data models in the current page.
+     * Prepares the data models and keys.
+     *
+     * This method will prepare the data models and keys that can be retrieved via
+     * [[getModels()]] and [[getKeys()]].
+     *
+     * This method will be implicitly called by [[getModels()]] and [[getKeys()]] if it has not been called before.
+     *
+     * @param boolean $forcePrepare whether to force data preparation even if it has been done before.
      */
-    public function getCount()
+    public function prepare($forcePrepare = false)
     {
-        return count($this->getModels());
+        if ($forcePrepare || $this->_models === null) {
+            $this->_models = $this->prepareModels();
+        }
+        if ($forcePrepare || $this->_keys === null) {
+            $this->_keys = $this->prepareKeys($this->_models);
+        }
     }
+
+    /**
+     * Prepares the data models that will be made available in the current page.
+     * @return array the available data models
+     */
+    abstract protected function prepareModels();
+
+    /**
+     * Prepares the keys associated with the currently available data models.
+     * @param array $models the available data models
+     * @return array the keys
+     */
+    abstract protected function prepareKeys($models);
 
     /**
      * Returns the total number of data models.
@@ -201,6 +165,41 @@ abstract class BaseDataProvider extends Component implements DataProviderInterfa
             throw new InvalidParamException('Only Pagination instance, configuration array or false is allowed.');
         }
     }
+
+    /**
+     * Returns the number of data models in the current page.
+     * @return integer the number of data models in the current page.
+     */
+    public function getCount()
+    {
+        return count($this->getModels());
+    }
+
+    /**
+     * Returns the data models in the current page.
+     * @return array the list of data models in the current page.
+     */
+    public function getModels()
+    {
+        $this->prepare();
+
+        return $this->_models;
+    }
+
+    /**
+     * Sets the data models in the current page.
+     * @param array $models the models in the current page
+     */
+    public function setModels($models)
+    {
+        $this->_models = $models;
+    }
+
+    /**
+     * Returns a value indicating the total number of data models in this data provider.
+     * @return integer total number of data models in this data provider.
+     */
+    abstract protected function prepareTotalCount();
 
     /**
      * @return Sort|boolean the sorting object. If this is false, it means the sorting is disabled.

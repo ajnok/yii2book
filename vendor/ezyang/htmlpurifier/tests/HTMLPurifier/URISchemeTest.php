@@ -19,6 +19,13 @@ class HTMLPurifier_URISchemeTest extends HTMLPurifier_URIHarness
             'vr4MkhoXe0rZigAAAABJRU5ErkJggg==';
     }
 
+    public function test_http_regular()
+    {
+        $this->assertValidation(
+            'http://example.com/?s=q#fragment'
+        );
+    }
+
     protected function assertValidation($uri, $expect_uri = true)
     {
         $this->prepareURI($uri, $expect_uri);
@@ -27,13 +34,6 @@ class HTMLPurifier_URISchemeTest extends HTMLPurifier_URIHarness
         $scheme = $uri->getSchemeObj($this->config, $this->context);
         $result = $scheme->validate($uri, $this->config, $this->context);
         $this->assertEitherFailOrIdentical($result, $uri, $expect_uri);
-    }
-
-    public function test_http_regular()
-    {
-        $this->assertValidation(
-            'http://example.com/?s=q#fragment'
-        );
     }
 
     public function test_http_uppercase()

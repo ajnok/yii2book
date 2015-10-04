@@ -67,39 +67,6 @@ class HTMLPurifier_Language
     }
 
     /**
-     * Loads language object with necessary info from factory cache
-     * @note This is a lazy loader
-     */
-    public function load()
-    {
-        if ($this->_loaded) {
-            return;
-        }
-        $factory = HTMLPurifier_LanguageFactory::instance();
-        $factory->loadLanguage($this->code);
-        foreach ($factory->keys as $key) {
-            $this->$key = $factory->cache[$this->code][$key];
-        }
-        $this->_loaded = true;
-    }
-
-    /**
-     * Retrieves a localised message.
-     * @param string $key string identifier of message
-     * @return string localised message
-     */
-    public function getMessage($key)
-    {
-        if (!$this->_loaded) {
-            $this->load();
-        }
-        if (!isset($this->messages[$key])) {
-            return "[$key]";
-        }
-        return $this->messages[$key];
-    }
-
-    /**
      * Retrieves a localised error name.
      * @param int $int error number, corresponding to PHP's error reporting
      * @return string localised message
@@ -116,25 +83,20 @@ class HTMLPurifier_Language
     }
 
     /**
-     * Converts an array list into a string readable representation
-     * @param array $array
-     * @return string
+     * Loads language object with necessary info from factory cache
+     * @note This is a lazy loader
      */
-    public function listify($array)
+    public function load()
     {
-        $sep      = $this->getMessage('Item separator');
-        $sep_last = $this->getMessage('Item separator last');
-        $ret = '';
-        for ($i = 0, $c = count($array); $i < $c; $i++) {
-            if ($i == 0) {
-            } elseif ($i + 1 < $c) {
-                $ret .= $sep;
-            } else {
-                $ret .= $sep_last;
-            }
-            $ret .= $array[$i];
+        if ($this->_loaded) {
+            return;
         }
-        return $ret;
+        $factory = HTMLPurifier_LanguageFactory::instance();
+        $factory->loadLanguage($this->code);
+        foreach ($factory->keys as $key) {
+            $this->$key = $factory->cache[$this->code][$key];
+        }
+        $this->_loaded = true;
     }
 
     /**
@@ -198,6 +160,44 @@ class HTMLPurifier_Language
             $subst['$' . $i] = $value;
         }
         return strtr($raw, $subst);
+    }
+
+    /**
+     * Converts an array list into a string readable representation
+     * @param array $array
+     * @return string
+     */
+    public function listify($array)
+    {
+        $sep      = $this->getMessage('Item separator');
+        $sep_last = $this->getMessage('Item separator last');
+        $ret = '';
+        for ($i = 0, $c = count($array); $i < $c; $i++) {
+            if ($i == 0) {
+            } elseif ($i + 1 < $c) {
+                $ret .= $sep;
+            } else {
+                $ret .= $sep_last;
+            }
+            $ret .= $array[$i];
+        }
+        return $ret;
+    }
+
+    /**
+     * Retrieves a localised message.
+     * @param string $key string identifier of message
+     * @return string localised message
+     */
+    public function getMessage($key)
+    {
+        if (!$this->_loaded) {
+            $this->load();
+        }
+        if (!isset($this->messages[$key])) {
+            return "[$key]";
+        }
+        return $this->messages[$key];
     }
 }
 

@@ -3,22 +3,16 @@
 class HTMLPurifier_Lexer_DirectLex_ErrorsTest extends HTMLPurifier_ErrorsHarness
 {
 
-    public function invoke($input)
-    {
-        $lexer = new HTMLPurifier_Lexer_DirectLex();
-        $lexer->tokenizeHTML($input, $this->config, $this->context);
-    }
-
-    public function invokeAttr($input)
-    {
-        $lexer = new HTMLPurifier_Lexer_DirectLex();
-        $lexer->parseAttributeString($input, $this->config, $this->context);
-    }
-
     public function testExtractBody()
     {
         $this->expectErrorCollection(E_WARNING, 'Lexer: Extracted body');
         $this->invoke('<body>foo</body>');
+    }
+
+    public function invoke($input)
+    {
+        $lexer = new HTMLPurifier_Lexer_DirectLex();
+        $lexer->tokenizeHTML($input, $this->config, $this->context);
     }
 
     public function testUnclosedComment()
@@ -42,12 +36,18 @@ class HTMLPurifier_Lexer_DirectLex_ErrorsTest extends HTMLPurifier_ErrorsHarness
         $this->invoke('<a href=""');
     }
 
-    // these are sub-errors, will only be thrown in context of collector
-
     public function testMissingAttributeKey1()
     {
         $this->expectErrorCollection(E_ERROR, 'Lexer: Missing attribute key');
         $this->invokeAttr('=""');
+    }
+
+    // these are sub-errors, will only be thrown in context of collector
+
+    public function invokeAttr($input)
+    {
+        $lexer = new HTMLPurifier_Lexer_DirectLex();
+        $lexer->parseAttributeString($input, $this->config, $this->context);
     }
 
     public function testMissingAttributeKey2()

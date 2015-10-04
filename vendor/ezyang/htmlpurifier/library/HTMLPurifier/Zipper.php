@@ -40,6 +40,16 @@ class HTMLPurifier_Zipper
     }
 
     /**
+     * Delete contents of current hole, shifting hole to
+     * next element.
+     * @return Original contents of new hole.
+     */
+    public function delete()
+    {
+        return empty($this->back) ? NULL : array_pop($this->back);
+    }
+
+    /**
      * Convert zipper back into a normal array, optionally filling in
      * the hole with a value. (Usually you should supply a $t, unless you
      * are at the end of the array.)
@@ -51,16 +61,6 @@ class HTMLPurifier_Zipper
             $a[] = $this->back[$i];
         }
         return $a;
-    }
-
-    /**
-     * Move hole to the next element.
-     * @param $t Element to fill hole with
-     * @return Original contents of new hole.
-     */
-    public function next($t) {
-        if ($t !== NULL) array_push($this->front, $t);
-        return empty($this->back) ? NULL : array_pop($this->back);
     }
 
     /**
@@ -77,22 +77,25 @@ class HTMLPurifier_Zipper
     }
 
     /**
+     * Move hole to the next element.
+     * @param $t Element to fill hole with
+     * @return Original contents of new hole.
+     */
+    public function next($t)
+    {
+        if ($t !== NULL) array_push($this->front, $t);
+        return empty($this->back) ? NULL : array_pop($this->back);
+    }
+
+    /**
      * Move hole to the previous element
      * @param $t Element to fill hole with
      * @return Original contents of new hole.
      */
-    public function prev($t) {
+    public function prev($t)
+    {
         if ($t !== NULL) array_push($this->back, $t);
         return empty($this->front) ? NULL : array_pop($this->front);
-    }
-
-    /**
-     * Delete contents of current hole, shifting hole to
-     * next element.
-     * @return Original contents of new hole.
-     */
-    public function delete() {
-        return empty($this->back) ? NULL : array_pop($this->back);
     }
 
     /**
@@ -109,14 +112,6 @@ class HTMLPurifier_Zipper
      */
     public function insertBefore($t) {
         if ($t !== NULL) array_push($this->front, $t);
-    }
-
-    /**
-     * Insert element after hole.
-     * @param Element to insert
-     */
-    public function insertAfter($t) {
-        if ($t !== NULL) array_push($this->back, $t);
     }
 
     /**
@@ -153,5 +148,14 @@ class HTMLPurifier_Zipper
             $r = $replacement[$i];
         }
         return array($old, $r);
+    }
+
+    /**
+     * Insert element after hole.
+     * @param Element to insert
+     */
+    public function insertAfter($t)
+    {
+        if ($t !== NULL) array_push($this->back, $t);
     }
 }

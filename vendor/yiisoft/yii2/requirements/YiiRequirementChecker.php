@@ -57,6 +57,15 @@ if (version_compare(PHP_VERSION, '4.3', '<')) {
 class YiiRequirementChecker
 {
     /**
+     * Performs the check for the Yii core requirements.
+     * @return YiiRequirementChecker self instance.
+     */
+    function checkYii()
+    {
+        return $this->check(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'requirements.php');
+    }
+
+    /**
      * Check the given requirements, collecting results into internal field.
      * This method can be invoked several times checking different requirement sets.
      * Use [[getResult()]] or [[render()]] to get the results.
@@ -107,12 +116,64 @@ class YiiRequirementChecker
     }
 
     /**
-     * Performs the check for the Yii core requirements.
-     * @return YiiRequirementChecker self instance.
+     * Displays a usage error.
+     * This method will then terminate the execution of the current application.
+     * @param string $message the error message
      */
-    function checkYii()
+    function usageError($message)
     {
-        return $this->check(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'requirements.php');
+        echo "Error: $message\n\n";
+        exit(1);
+    }
+
+    /**
+     * Normalizes requirement ensuring it has correct format.
+     * @param array $requirement raw requirement.
+     * @param integer $requirementKey requirement key in the list.
+     * @return array normalized requirement.
+     */
+    function normalizeRequirement($requirement, $requirementKey = 0)
+    {
+        if (!is_array($requirement)) {
+            $this->usageError('Requirement must be an array!');
+        }
+        if (!array_key_exists('condition', $requirement)) {
+            $this->usageError("Requirement '{$requirementKey}' has no condition!");
+        } else {
+            $evalPrefix = 'eval:';
+            if (is_string($requirement['condition']) && strpos($requirement['condition'], $evalPrefix) === 0) {
+                $expression = substr($requirement['condition'], strlen($evalPrefix));
+                $requirement['condition'] = $this->evaluateExpression($expression);
+            }
+        }
+        if (!array_key_exists('name', $requirement)) {
+            $requirement['name'] = is_numeric($requirementKey) ? 'Requirement #' . $requirementKey : $requirementKey;
+        }
+        if (!array_key_exists('mandatory', $requirement)) {
+            if (array_key_exists('required', $requirement)) {
+                $requirement['mandatory'] = $requirement['required'];
+            } else {
+                $requirement['mandatory'] = false;
+            }
+        }
+        if (!array_key_exists('by', $requirement)) {
+            $requirement['by'] = 'Unknown';
+        }
+        if (!array_key_exists('memo', $requirement)) {
+            $requirement['memo'] = '';
+        }
+
+        return $requirement;
+    }
+
+    /**
+     * Evaluates a PHP expression under the context of this class.
+     * @param string $expression a PHP expression to be evaluated.
+     * @return mixed the expression result.
+     */
+    function evaluateExpression($expression)
+    {
+        return eval('return ' . $expression . ';');
     }
 
     /**
@@ -162,6 +223,34 @@ class YiiRequirementChecker
             $viewFileName = $baseViewFilePath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'index.php';
         }
         $this->renderViewFile($viewFileName, $this->result);
+    }
+
+    /**
+     * Renders a view file.
+     * This method includes the view file as a PHP script
+     * and captures the display result if required.
+     * @param string $_viewFile_ view file
+     * @param array $_data_ data to be extracted and made available to the view file
+     * @param boolean $_return_ whether the rendering result should be returned as a string
+     * @return string the rendering result. Null if the rendering result is not required.
+     */
+    function renderViewFile($_viewFile_, $_data_ = null, $_return_ = false)
+    {
+        // we use special variable names here to avoid conflict when extracting data
+        if (is_array($_data_)) {
+            extract($_data_, EXTR_PREFIX_SAME, 'data');
+        } else {
+            $data = $_data_;
+        }
+        if ($_return_) {
+            ob_start();
+            ob_implicit_flush(false);
+            require($_viewFile_);
+
+            return ob_get_clean();
+        } else {
+            require($_viewFile_);
+        }
     }
 
     /**
@@ -218,6 +307,30 @@ class YiiRequirementChecker
     }
 
     /**
+     * Checks if upload max file size matches the given range.
+     * @param string|null $min verbose file size minimum required value, pass null to skip minimum check.
+     * @param string|null $max verbose file size maximum required value, pass null to skip maximum check.
+     * @return boolean success.
+     */
+    function checkUploadMaxFileSize($min = null, $max = null)
+    {
+        $postMaxSize = ini_get('post_max_size');
+        $uploadMaxFileSize = ini_get('upload_max_filesize');
+        if ($min !== null) {
+            $minCheckResult = $this->compareByteSize($postMaxSize, $min, '>=') && $this->compareByteSize($uploadMaxFileSize, $min, '>=');
+        } else {
+            $minCheckResult = true;
+        }
+        if ($max !== null) {
+            $maxCheckResult = $this->compareByteSize($postMaxSize, $max, '<=') && $this->compareByteSize($uploadMaxFileSize, $max, '<=');
+        } else {
+            $maxCheckResult = true;
+        }
+
+        return ($minCheckResult && $maxCheckResult);
+    }
+
+    /**
      * Compare byte sizes of values given in the verbose representation,
      * like '5M', '15K' etc.
      * @param string $a first value.
@@ -269,119 +382,6 @@ class YiiRequirementChecker
                 return 0;
             }
         }
-    }
-
-    /**
-     * Checks if upload max file size matches the given range.
-     * @param string|null $min verbose file size minimum required value, pass null to skip minimum check.
-     * @param string|null $max verbose file size maximum required value, pass null to skip maximum check.
-     * @return boolean success.
-     */
-    function checkUploadMaxFileSize($min = null, $max = null)
-    {
-        $postMaxSize = ini_get('post_max_size');
-        $uploadMaxFileSize = ini_get('upload_max_filesize');
-        if ($min !== null) {
-            $minCheckResult = $this->compareByteSize($postMaxSize, $min, '>=') && $this->compareByteSize($uploadMaxFileSize, $min, '>=');
-        } else {
-            $minCheckResult = true;
-        }
-        if ($max !== null) {
-            $maxCheckResult = $this->compareByteSize($postMaxSize, $max, '<=') && $this->compareByteSize($uploadMaxFileSize, $max, '<=');
-        } else {
-            $maxCheckResult = true;
-        }
-
-        return ($minCheckResult && $maxCheckResult);
-    }
-
-    /**
-     * Renders a view file.
-     * This method includes the view file as a PHP script
-     * and captures the display result if required.
-     * @param string $_viewFile_ view file
-     * @param array $_data_ data to be extracted and made available to the view file
-     * @param boolean $_return_ whether the rendering result should be returned as a string
-     * @return string the rendering result. Null if the rendering result is not required.
-     */
-    function renderViewFile($_viewFile_, $_data_ = null, $_return_ = false)
-    {
-        // we use special variable names here to avoid conflict when extracting data
-        if (is_array($_data_)) {
-            extract($_data_, EXTR_PREFIX_SAME, 'data');
-        } else {
-            $data = $_data_;
-        }
-        if ($_return_) {
-            ob_start();
-            ob_implicit_flush(false);
-            require($_viewFile_);
-
-            return ob_get_clean();
-        } else {
-            require($_viewFile_);
-        }
-    }
-
-    /**
-     * Normalizes requirement ensuring it has correct format.
-     * @param array $requirement raw requirement.
-     * @param integer $requirementKey requirement key in the list.
-     * @return array normalized requirement.
-     */
-    function normalizeRequirement($requirement, $requirementKey = 0)
-    {
-        if (!is_array($requirement)) {
-            $this->usageError('Requirement must be an array!');
-        }
-        if (!array_key_exists('condition', $requirement)) {
-            $this->usageError("Requirement '{$requirementKey}' has no condition!");
-        } else {
-            $evalPrefix = 'eval:';
-            if (is_string($requirement['condition']) && strpos($requirement['condition'], $evalPrefix) === 0) {
-                $expression = substr($requirement['condition'], strlen($evalPrefix));
-                $requirement['condition'] = $this->evaluateExpression($expression);
-            }
-        }
-        if (!array_key_exists('name', $requirement)) {
-            $requirement['name'] = is_numeric($requirementKey) ? 'Requirement #' . $requirementKey : $requirementKey;
-        }
-        if (!array_key_exists('mandatory', $requirement)) {
-            if (array_key_exists('required', $requirement)) {
-                $requirement['mandatory'] = $requirement['required'];
-            } else {
-                $requirement['mandatory'] = false;
-            }
-        }
-        if (!array_key_exists('by', $requirement)) {
-            $requirement['by'] = 'Unknown';
-        }
-        if (!array_key_exists('memo', $requirement)) {
-            $requirement['memo'] = '';
-        }
-
-        return $requirement;
-    }
-
-    /**
-     * Displays a usage error.
-     * This method will then terminate the execution of the current application.
-     * @param string $message the error message
-     */
-    function usageError($message)
-    {
-        echo "Error: $message\n\n";
-        exit(1);
-    }
-
-    /**
-     * Evaluates a PHP expression under the context of this class.
-     * @param string $expression a PHP expression to be evaluated.
-     * @return mixed the expression result.
-     */
-    function evaluateExpression($expression)
-    {
-        return eval('return ' . $expression . ';');
     }
 
     /**

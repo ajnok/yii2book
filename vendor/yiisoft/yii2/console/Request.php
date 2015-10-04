@@ -22,34 +22,6 @@ class Request extends \yii\base\Request
 {
     private $_params;
 
-
-    /**
-     * Returns the command line arguments.
-     * @return array the command line arguments. It does not include the entry script name.
-     */
-    public function getParams()
-    {
-        if (!isset($this->_params)) {
-            if (isset($_SERVER['argv'])) {
-                $this->_params = $_SERVER['argv'];
-                array_shift($this->_params);
-            } else {
-                $this->_params = [];
-            }
-        }
-
-        return $this->_params;
-    }
-
-    /**
-     * Sets the command line arguments.
-     * @param array $params the command line arguments
-     */
-    public function setParams($params)
-    {
-        $this->_params = $params;
-    }
-
     /**
      * Resolves the current request into a route and the associated parameters.
      * @return array the first element is the route, and the second is the associated parameters.
@@ -77,5 +49,32 @@ class Request extends \yii\base\Request
         }
 
         return [$route, $params];
+    }
+
+    /**
+     * Returns the command line arguments.
+     * @return array the command line arguments. It does not include the entry script name.
+     */
+    public function getParams()
+    {
+        if (!isset($this->_params)) {
+            if (isset($_SERVER['argv'])) {
+                $this->_params = $_SERVER['argv'];
+                array_shift($this->_params);
+            } else {
+                $this->_params = [];
+            }
+        }
+
+        return $this->_params;
+    }
+
+    /**
+     * Sets the command line arguments.
+     * @param array $params the command line arguments
+     */
+    public function setParams($params)
+    {
+        $this->_params = $params;
     }
 }

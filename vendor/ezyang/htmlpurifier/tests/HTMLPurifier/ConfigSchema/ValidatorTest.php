@@ -22,6 +22,19 @@ class HTMLPurifier_ConfigSchema_ValidatorTest extends UnitTestCase
         $this->validator->validate($this->interchange);
     }
 
+    protected function makeDirective($key)
+    {
+        $directive = new HTMLPurifier_ConfigSchema_Interchange_Directive();
+        $directive->id = new HTMLPurifier_ConfigSchema_Interchange_Id($key);
+        $this->interchange->addDirective($directive);
+        return $directive;
+    }
+
+    protected function expectValidationException($msg)
+    {
+        $this->expectException(new HTMLPurifier_ConfigSchema_Exception($msg));
+    }
+
     public function testDirectiveTypeNotEmpty()
     {
         $d = $this->makeDirective('Ns.Dir');
@@ -66,6 +79,8 @@ class HTMLPurifier_ConfigSchema_ValidatorTest extends UnitTestCase
         $this->validator->validate($this->interchange);
     }
 
+    // helper functions
+
     public function testDirectiveValueAliasesIsArray()
     {
         $d = $this->makeDirective('Ns.Dir');
@@ -88,22 +103,6 @@ class HTMLPurifier_ConfigSchema_ValidatorTest extends UnitTestCase
 
         $this->expectValidationException("Allowed in directive 'Ns.Dir' must be a lookup array");
         $this->validator->validate($this->interchange);
-    }
-
-    // helper functions
-
-
-    protected function makeDirective($key)
-    {
-        $directive = new HTMLPurifier_ConfigSchema_Interchange_Directive();
-        $directive->id = new HTMLPurifier_ConfigSchema_Interchange_Id($key);
-        $this->interchange->addDirective($directive);
-        return $directive;
-    }
-
-    protected function expectValidationException($msg)
-    {
-        $this->expectException(new HTMLPurifier_ConfigSchema_Exception($msg));
     }
 
 }

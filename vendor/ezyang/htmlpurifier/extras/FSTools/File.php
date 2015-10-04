@@ -78,6 +78,14 @@ class FSTools_File
         return @$this->fs->chmod($this->name, $octal_code);
     }
 
+    /** Retrieves a line from an open file, with optional max length $length */
+    public function getLine($length = null)
+    {
+        if (!$this->handle) $this->open('r');
+        if ($length === null) return $this->fs->fgets($this->handle);
+        else return $this->fs->fgets($this->handle, $length);
+    }
+
     /** Opens file's handle */
     public function open($mode)
     {
@@ -93,14 +101,6 @@ class FSTools_File
         $status = $this->fs->fclose($this->handle);
         $this->handle = false;
         return $status;
-    }
-
-    /** Retrieves a line from an open file, with optional max length $length */
-    public function getLine($length = null)
-    {
-        if (!$this->handle) $this->open('r');
-        if ($length === null) return $this->fs->fgets($this->handle);
-        else return $this->fs->fgets($this->handle, $length);
     }
 
     /** Retrieves a character from an open file */

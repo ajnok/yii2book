@@ -120,85 +120,15 @@ class Payment extends Base
     );
 
     /**
-     * @return string Returns a credit card vendor name
+     * Return the String of a SWIFT/BIC number
      *
-     * @example 'MasterCard'
+     * @example 'RZTIAT22263'
+     * @link    http://en.wikipedia.org/wiki/ISO_9362
+     * @return  string Swift/Bic number
      */
-    public static function creditCardType()
+    public static function swiftBicNumber()
     {
-        return static::randomElement(static::$cardVendors);
-    }
-
-    /**
-     * Returns the String of a credit card number.
-     *
-     * @param string  $type      Supporting any of 'Visa', 'MasterCard', 'Amercian Express', and 'Discover'
-     * @param boolean $formatted Set to true if the output string should contain one separator every 4 digits
-     * @param string  $separator Separator string for formatting card number. Defaults to dash (-).
-     * @return string
-     *
-     * @example '4485480221084675'
-     */
-    public static function creditCardNumber($type = null, $formatted = false, $separator = '-')
-    {
-        if (is_null($type)) {
-            $type = static::creditCardType();
-        }
-        $mask = static::randomElement(static::$cardParams[$type]);
-
-        $number = static::numerify($mask);
-        $number .= Luhn::computeCheckDigit($number);
-
-        if ($formatted) {
-            $p1 = substr($number, 0, 4);
-            $p2 = substr($number, 4, 4);
-            $p3 = substr($number, 8, 4);
-            $p4 = substr($number, 12);
-            $number = $p1 . $separator . $p2 . $separator . $p3 . $separator . $p4;
-        }
-
-        return $number;
-    }
-
-    /**
-     * @param boolean $valid True (by default) to get a valid expiration date, false to get a maybe valid date
-     * @return \DateTime
-     * @example 04/13
-     */
-    public function creditCardExpirationDate($valid = true)
-    {
-        if ($valid) {
-            return $this->generator->dateTimeBetween('now', '36 months');
-        }
-
-        return $this->generator->dateTimeBetween('-36 months', '36 months');
-    }
-
-    /**
-     * @param boolean $valid                True (by default) to get a valid expiration date, false to get a maybe valid date
-     * @param string  $expirationDateFormat
-     * @return string
-     * @example '04/13'
-     */
-    public function creditCardExpirationDateString($valid = true, $expirationDateFormat = null)
-    {
-        return $this->creditCardExpirationDate($valid)->format(is_null($expirationDateFormat) ? static::$expirationDateFormat : $expirationDateFormat);
-    }
-
-    /**
-     * @param  boolean $valid True (by default) to get a valid expiration date, false to get a maybe valid date
-     * @return array
-     */
-    public function creditCardDetails($valid = true)
-    {
-        $type = static::creditCardType();
-
-        return array(
-            'type'   => $type,
-            'number' => static::creditCardNumber($type),
-            'name'   => $this->generator->name(),
-            'expirationDate' => $this->creditCardExpirationDateString($valid)
-        );
+        return self::regexify("^([A-Z]){4}([A-Z]){2}([0-9A-Z]){2}([0-9A-Z]{3})?$");
     }
 
     /**
@@ -285,14 +215,84 @@ class Payment extends Base
     }
 
     /**
-     * Return the String of a SWIFT/BIC number
-     *
-     * @example 'RZTIAT22263'
-     * @link    http://en.wikipedia.org/wiki/ISO_9362
-     * @return  string Swift/Bic number
+     * @param  boolean $valid True (by default) to get a valid expiration date, false to get a maybe valid date
+     * @return array
      */
-    public static function swiftBicNumber()
+    public function creditCardDetails($valid = true)
     {
-        return self::regexify("^([A-Z]){4}([A-Z]){2}([0-9A-Z]){2}([0-9A-Z]{3})?$");
+        $type = static::creditCardType();
+
+        return array(
+            'type' => $type,
+            'number' => static::creditCardNumber($type),
+            'name' => $this->generator->name(),
+            'expirationDate' => $this->creditCardExpirationDateString($valid)
+        );
+    }
+
+    /**
+     * @return string Returns a credit card vendor name
+     *
+     * @example 'MasterCard'
+     */
+    public static function creditCardType()
+    {
+        return static::randomElement(static::$cardVendors);
+    }
+
+    /**
+     * Returns the String of a credit card number.
+     *
+     * @param string $type Supporting any of 'Visa', 'MasterCard', 'Amercian Express', and 'Discover'
+     * @param boolean $formatted Set to true if the output string should contain one separator every 4 digits
+     * @param string $separator Separator string for formatting card number. Defaults to dash (-).
+     * @return string
+     *
+     * @example '4485480221084675'
+     */
+    public static function creditCardNumber($type = null, $formatted = false, $separator = '-')
+    {
+        if (is_null($type)) {
+            $type = static::creditCardType();
+        }
+        $mask = static::randomElement(static::$cardParams[$type]);
+
+        $number = static::numerify($mask);
+        $number .= Luhn::computeCheckDigit($number);
+
+        if ($formatted) {
+            $p1 = substr($number, 0, 4);
+            $p2 = substr($number, 4, 4);
+            $p3 = substr($number, 8, 4);
+            $p4 = substr($number, 12);
+            $number = $p1 . $separator . $p2 . $separator . $p3 . $separator . $p4;
+        }
+
+        return $number;
+    }
+
+    /**
+     * @param boolean $valid True (by default) to get a valid expiration date, false to get a maybe valid date
+     * @param string $expirationDateFormat
+     * @return string
+     * @example '04/13'
+     */
+    public function creditCardExpirationDateString($valid = true, $expirationDateFormat = null)
+    {
+        return $this->creditCardExpirationDate($valid)->format(is_null($expirationDateFormat) ? static::$expirationDateFormat : $expirationDateFormat);
+    }
+
+    /**
+     * @param boolean $valid True (by default) to get a valid expiration date, false to get a maybe valid date
+     * @return \DateTime
+     * @example 04/13
+     */
+    public function creditCardExpirationDate($valid = true)
+    {
+        if ($valid) {
+            return $this->generator->dateTimeBetween('now', '36 months');
+        }
+
+        return $this->generator->dateTimeBetween('-36 months', '36 months');
     }
 }

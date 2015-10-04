@@ -100,43 +100,6 @@ class BaseArrayHelper
     }
 
     /**
-     * Merges two or more arrays into one recursively.
-     * If each array has an element with the same string key value, the latter
-     * will overwrite the former (different from array_merge_recursive).
-     * Recursive merging will be conducted if both arrays have an element of array
-     * type and are having the same key.
-     * For integer-keyed elements, the elements from the latter array will
-     * be appended to the former array.
-     * @param array $a array to be merged to
-     * @param array $b array to be merged from. You can specify additional
-     * arrays via third argument, fourth argument etc.
-     * @return array the merged array (the original arrays are not changed.)
-     */
-    public static function merge($a, $b)
-    {
-        $args = func_get_args();
-        $res = array_shift($args);
-        while (!empty($args)) {
-            $next = array_shift($args);
-            foreach ($next as $k => $v) {
-                if (is_int($k)) {
-                    if (isset($res[$k])) {
-                        $res[] = $v;
-                    } else {
-                        $res[$k] = $v;
-                    }
-                } elseif (is_array($v) && isset($res[$k]) && is_array($res[$k])) {
-                    $res[$k] = self::merge($res[$k], $v);
-                } else {
-                    $res[$k] = $v;
-                }
-            }
-        }
-
-        return $res;
-    }
-
-    /**
      * Retrieves the value of an array element or object property with the given key or property name.
      * If the key does not exist in the array or object, the default value will be returned instead.
      *
@@ -205,6 +168,43 @@ class BaseArrayHelper
         } else {
             return $default;
         }
+    }
+
+    /**
+     * Merges two or more arrays into one recursively.
+     * If each array has an element with the same string key value, the latter
+     * will overwrite the former (different from array_merge_recursive).
+     * Recursive merging will be conducted if both arrays have an element of array
+     * type and are having the same key.
+     * For integer-keyed elements, the elements from the latter array will
+     * be appended to the former array.
+     * @param array $a array to be merged to
+     * @param array $b array to be merged from. You can specify additional
+     * arrays via third argument, fourth argument etc.
+     * @return array the merged array (the original arrays are not changed.)
+     */
+    public static function merge($a, $b)
+    {
+        $args = func_get_args();
+        $res = array_shift($args);
+        while (!empty($args)) {
+            $next = array_shift($args);
+            foreach ($next as $k => $v) {
+                if (is_int($k)) {
+                    if (isset($res[$k])) {
+                        $res[] = $v;
+                    } else {
+                        $res[$k] = $v;
+                    }
+                } elseif (is_array($v) && isset($res[$k]) && is_array($res[$k])) {
+                    $res[$k] = self::merge($res[$k], $v);
+                } else {
+                    $res[$k] = $v;
+                }
+            }
+        }
+
+        return $res;
     }
 
     /**
@@ -277,48 +277,6 @@ class BaseArrayHelper
         foreach ($array as $element) {
             $value = static::getValue($element, $key);
             $result[$value] = $element;
-        }
-
-        return $result;
-    }
-
-    /**
-     * Returns the values of a specified column in an array.
-     * The input array should be multidimensional or an array of objects.
-     *
-     * For example,
-     *
-     * ~~~
-     * $array = [
-     *     ['id' => '123', 'data' => 'abc'],
-     *     ['id' => '345', 'data' => 'def'],
-     * ];
-     * $result = ArrayHelper::getColumn($array, 'id');
-     * // the result is: ['123', '345']
-     *
-     * // using anonymous function
-     * $result = ArrayHelper::getColumn($array, function ($element) {
-     *     return $element['id'];
-     * });
-     * ~~~
-     *
-     * @param array $array
-     * @param string|\Closure $name
-     * @param boolean $keepKeys whether to maintain the array keys. If false, the resulting array
-     * will be re-indexed with integers.
-     * @return array the list of column values
-     */
-    public static function getColumn($array, $name, $keepKeys = true)
-    {
-        $result = [];
-        if ($keepKeys) {
-            foreach ($array as $k => $element) {
-                $result[$k] = static::getValue($element, $name);
-            }
-        } else {
-            foreach ($array as $element) {
-                $result[] = static::getValue($element, $name);
-            }
         }
 
         return $result;
@@ -447,6 +405,48 @@ class BaseArrayHelper
         }
         $args[] = &$array;
         call_user_func_array('array_multisort', $args);
+    }
+
+    /**
+     * Returns the values of a specified column in an array.
+     * The input array should be multidimensional or an array of objects.
+     *
+     * For example,
+     *
+     * ~~~
+     * $array = [
+     *     ['id' => '123', 'data' => 'abc'],
+     *     ['id' => '345', 'data' => 'def'],
+     * ];
+     * $result = ArrayHelper::getColumn($array, 'id');
+     * // the result is: ['123', '345']
+     *
+     * // using anonymous function
+     * $result = ArrayHelper::getColumn($array, function ($element) {
+     *     return $element['id'];
+     * });
+     * ~~~
+     *
+     * @param array $array
+     * @param string|\Closure $name
+     * @param boolean $keepKeys whether to maintain the array keys. If false, the resulting array
+     * will be re-indexed with integers.
+     * @return array the list of column values
+     */
+    public static function getColumn($array, $name, $keepKeys = true)
+    {
+        $result = [];
+        if ($keepKeys) {
+            foreach ($array as $k => $element) {
+                $result[$k] = static::getValue($element, $name);
+            }
+        } else {
+            foreach ($array as $element) {
+                $result[] = static::getValue($element, $name);
+            }
+        }
+
+        return $result;
     }
 
     /**

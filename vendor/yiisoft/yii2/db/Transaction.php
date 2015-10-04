@@ -73,17 +73,6 @@ class Transaction extends \yii\base\Object
      */
     private $_level = 0;
 
-
-    /**
-     * Returns a value indicating whether this transaction is active.
-     * @return boolean whether this transaction is active. Only an active transaction
-     * can [[commit()]] or [[rollBack()]].
-     */
-    public function getIsActive()
-    {
-        return $this->_level > 0 && $this->db && $this->db->isActive;
-    }
-
     /**
      * Begins a transaction.
      * @param string|null $isolationLevel The [isolation level][] to use for this transaction.
@@ -157,6 +146,16 @@ class Transaction extends \yii\base\Object
         } else {
             Yii::info('Transaction not committed: nested transaction not supported', __METHOD__);
         }
+    }
+
+    /**
+     * Returns a value indicating whether this transaction is active.
+     * @return boolean whether this transaction is active. Only an active transaction
+     * can [[commit()]] or [[rollBack()]].
+     */
+    public function getIsActive()
+    {
+        return $this->_level > 0 && $this->db && $this->db->isActive;
     }
 
     /**

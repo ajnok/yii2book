@@ -47,30 +47,6 @@ class XmlRpc_Freshmeat
     }
 
     /**
-     * Performs a raw XML RPC call to self::URL
-     */
-    protected function call($method, $params)
-    {
-        $request = xmlrpc_encode_request($method, $params, $this->encodeOptions);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::URL);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 1);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-type: text/xml',
-            'Content-length: ' . strlen($request)
-        ));
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
-        $data = curl_exec($ch);
-        if ($errno = curl_errno($ch)) {
-            throw new Exception("Curl error [$errno]: " . curl_error($ch));
-        } else {
-            curl_close($ch);
-            return xmlrpc_decode($data);
-        }
-    }
-
-    /**
      * Performs an XML RPC call to Freshmeat.
      * @param $name Name of method to call, can be methodName or method_name
      * @param $args Arguments of call, in form array('key1', 'val1', 'key2' ...)
@@ -114,6 +90,30 @@ class XmlRpc_Freshmeat
             else $method .= '_' . strtolower($v);
         }
         return $method;
+    }
+
+    /**
+     * Performs a raw XML RPC call to self::URL
+     */
+    protected function call($method, $params)
+    {
+        $request = xmlrpc_encode_request($method, $params, $this->encodeOptions);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, self::URL);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-type: text/xml',
+            'Content-length: ' . strlen($request)
+        ));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        $data = curl_exec($ch);
+        if ($errno = curl_errno($ch)) {
+            throw new Exception("Curl error [$errno]: " . curl_error($ch));
+        } else {
+            curl_close($ch);
+            return xmlrpc_decode($data);
+        }
     }
 
     /**

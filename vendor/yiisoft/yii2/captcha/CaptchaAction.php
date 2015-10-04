@@ -136,20 +136,6 @@ class CaptchaAction extends Action
     }
 
     /**
-     * Generates a hash code that can be used for client side validation.
-     * @param string $code the CAPTCHA code
-     * @return string a hash code generated from the CAPTCHA code
-     */
-    public function generateValidationHash($code)
-    {
-        for ($h = 0, $i = strlen($code) - 1; $i >= 0; --$i) {
-            $h += ord($code[$i]);
-        }
-
-        return $h;
-    }
-
-    /**
      * Gets the verification code.
      * @param boolean $regenerate whether the verification code should be regenerated.
      * @return string the verification code.
@@ -172,24 +158,12 @@ class CaptchaAction extends Action
     }
 
     /**
-     * Validates the input to see if it matches the generated code.
-     * @param string $input user input
-     * @param boolean $caseSensitive whether the comparison should be case-sensitive
-     * @return boolean whether the input is valid
+     * Returns the session variable name used to store verification code.
+     * @return string the session variable name
      */
-    public function validate($input, $caseSensitive)
+    protected function getSessionKey()
     {
-        $code = $this->getVerifyCode();
-        $valid = $caseSensitive ? ($input === $code) : strcasecmp($input, $code) === 0;
-        $session = Yii::$app->getSession();
-        $session->open();
-        $name = $this->getSessionKey() . 'count';
-        $session[$name] = $session[$name] + 1;
-        if ($valid || $session[$name] > $this->testLimit && $this->testLimit > 0) {
-            $this->getVerifyCode(true);
-        }
-
-        return $valid;
+        return '__captcha/' . $this->getUniqueId();
     }
 
     /**
@@ -224,12 +198,30 @@ class CaptchaAction extends Action
     }
 
     /**
-     * Returns the session variable name used to store verification code.
-     * @return string the session variable name
+     * Generates a hash code that can be used for client side validation.
+     * @param string $code the CAPTCHA code
+     * @return string a hash code generated from the CAPTCHA code
      */
-    protected function getSessionKey()
+    public function generateValidationHash($code)
     {
-        return '__captcha/' . $this->getUniqueId();
+        for ($h = 0, $i = strlen($code) - 1; $i >= 0; --$i) {
+            $h += ord($code[$i]);
+        }
+
+        return $h;
+    }
+
+    /**
+     * Sets the HTTP headers needed by image response.
+     */
+    protected function setHttpHeaders()
+    {
+        Yii::$app->getResponse()->getHeaders()
+            ->set('Pragma', 'public')
+            ->set('Expires', '0')
+            ->set('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
+            ->set('Content-Transfer-Encoding', 'binary')
+            ->set('Content-type', 'image/png');
     }
 
     /**
@@ -338,15 +330,23 @@ class CaptchaAction extends Action
     }
 
     /**
-     * Sets the HTTP headers needed by image response.
+     * Validates the input to see if it matches the generated code.
+     * @param string $input user input
+     * @param boolean $caseSensitive whether the comparison should be case-sensitive
+     * @return boolean whether the input is valid
      */
-    protected function setHttpHeaders()
+    public function validate($input, $caseSensitive)
     {
-        Yii::$app->getResponse()->getHeaders()
-            ->set('Pragma', 'public')
-            ->set('Expires', '0')
-            ->set('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
-            ->set('Content-Transfer-Encoding', 'binary')
-            ->set('Content-type', 'image/png');
+        $code = $this->getVerifyCode();
+        $valid = $caseSensitive ? ($input === $code) : strcasecmp($input, $code) === 0;
+        $session = Yii::$app->getSession();
+        $session->open();
+        $name = $this->getSessionKey() . 'count';
+        $session[$name] = $session[$name] + 1;
+        if ($valid || $session[$name] > $this->testLimit && $this->testLimit > 0) {
+            $this->getVerifyCode(true);
+        }
+
+        return $valid;
     }
 }

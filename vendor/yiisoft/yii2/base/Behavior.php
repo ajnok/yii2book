@@ -25,6 +25,20 @@ class Behavior extends Object
      */
     public $owner;
 
+    /**
+     * Attaches the behavior object to the component.
+     * The default implementation will set the [[owner]] property
+     * and attach event handlers as declared in [[events]].
+     * Make sure you call the parent implementation if you override this method.
+     * @param Component $owner the component that this behavior is to be attached to.
+     */
+    public function attach($owner)
+    {
+        $this->owner = $owner;
+        foreach ($this->events() as $event => $handler) {
+            $owner->on($event, is_string($handler) ? [$this, $handler] : $handler);
+        }
+    }
 
     /**
      * Declares event handlers for the [[owner]]'s events.
@@ -57,21 +71,6 @@ class Behavior extends Object
     public function events()
     {
         return [];
-    }
-
-    /**
-     * Attaches the behavior object to the component.
-     * The default implementation will set the [[owner]] property
-     * and attach event handlers as declared in [[events]].
-     * Make sure you call the parent implementation if you override this method.
-     * @param Component $owner the component that this behavior is to be attached to.
-     */
-    public function attach($owner)
-    {
-        $this->owner = $owner;
-        foreach ($this->events() as $event => $handler) {
-            $owner->on($event, is_string($handler) ? [$this, $handler] : $handler);
-        }
     }
 
     /**

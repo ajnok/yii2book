@@ -199,6 +199,137 @@ class Component extends Object
     }
 
     /**
+     * Makes sure that the behaviors declared in [[behaviors()]] are attached to this component.
+     */
+    public function ensureBehaviors()
+    {
+        if ($this->_behaviors === null) {
+            $this->_behaviors = [];
+            foreach ($this->behaviors() as $name => $behavior) {
+                $this->attachBehaviorInternal($name, $behavior);
+            }
+        }
+    }
+
+    /**
+     * Returns a list of behaviors that this component should behave as.
+     *
+     * Child classes may override this method to specify the behaviors they want to behave as.
+     *
+     * The return value of this method should be an array of behavior objects or configurations
+     * indexed by behavior names. A behavior configuration can be either a string specifying
+     * the behavior class or an array of the following structure:
+     *
+     * ~~~
+     * 'behaviorName' => [
+     *     'class' => 'BehaviorClass',
+     *     'property1' => 'value1',
+     *     'property2' => 'value2',
+     * ]
+     * ~~~
+     *
+     * Note that a behavior class must extend from [[Behavior]]. Behavior names can be strings
+     * or integers. If the former, they uniquely identify the behaviors. If the latter, the corresponding
+     * behaviors are anonymous and their properties and methods will NOT be made available via the component
+     * (however, the behaviors can still respond to the component's events).
+     *
+     * Behaviors declared in this method will be attached to the component automatically (on demand).
+     *
+     * @return array the behavior configurations.
+     */
+    public function behaviors()
+    {
+        return [];
+    }
+
+    /**
+     * Attaches a behavior to this component.
+     * @param string|integer $name the name of the behavior. If this is an integer, it means the behavior
+     * is an anonymous one. Otherwise, the behavior is a named one and any existing behavior with the same name
+     * will be detached first.
+     * @param string|array|Behavior $behavior the behavior to be attached
+     * @return Behavior the attached behavior.
+     */
+    private function attachBehaviorInternal($name, $behavior)
+    {
+        if (!($behavior instanceof Behavior)) {
+            $behavior = Yii::createObject($behavior);
+        }
+        if (is_int($name)) {
+            $behavior->attach($this);
+            $this->_behaviors[] = $behavior;
+        } else {
+            if (isset($this->_behaviors[$name])) {
+                $this->_behaviors[$name]->detach();
+            }
+            $behavior->attach($this);
+            $this->_behaviors[$name] = $behavior;
+        }
+        return $behavior;
+    }
+
+    /**
+     * Attaches an event handler to an event.
+     *
+     * The event handler must be a valid PHP callback. The following are
+     * some examples:
+     *
+     * ~~~
+     * function ($event) { ... }         // anonymous function
+     * [$object, 'handleClick']          // $object->handleClick()
+     * ['Page', 'handleClick']           // Page::handleClick()
+     * 'handleClick'                     // global function handleClick()
+     * ~~~
+     *
+     * The event handler must be defined with the following signature,
+     *
+     * ~~~
+     * function ($event)
+     * ~~~
+     *
+     * where `$event` is an [[Event]] object which includes parameters associated with the event.
+     *
+     * @param string $name the event name
+     * @param callable $handler the event handler
+     * @param mixed $data the data to be passed to the event handler when the event is triggered.
+     * When the event handler is invoked, this data can be accessed via [[Event::data]].
+     * @param boolean $append whether to append new event handler to the end of the existing
+     * handler list. If false, the new handler will be inserted at the beginning of the existing
+     * handler list.
+     * @see off()
+     */
+    public function on($name, $handler, $data = null, $append = true)
+    {
+        $this->ensureBehaviors();
+        if ($append || empty($this->_events[$name])) {
+            $this->_events[$name][] = [$handler, $data];
+        } else {
+            array_unshift($this->_events[$name], [$handler, $data]);
+        }
+    }
+
+    /**
+     * Attaches a behavior to this component.
+     * This method will create the behavior object based on the given
+     * configuration. After that, the behavior object will be attached to
+     * this component by calling the [[Behavior::attach()]] method.
+     * @param string $name the name of the behavior.
+     * @param string|array|Behavior $behavior the behavior configuration. This can be one of the following:
+     *
+     *  - a [[Behavior]] object
+     *  - a string specifying the behavior class
+     *  - an object configuration array that will be passed to [[Yii::createObject()]] to create the behavior object.
+     *
+     * @return Behavior the behavior object
+     * @see detachBehavior()
+     */
+    public function attachBehavior($name, $behavior)
+    {
+        $this->ensureBehaviors();
+        return $this->attachBehaviorInternal($name, $behavior);
+    }
+
+    /**
      * Checks if a property is set, i.e. defined and not null.
      * This method will check in the following order and act accordingly:
      *
@@ -403,37 +534,6 @@ class Component extends Object
     }
 
     /**
-     * Returns a list of behaviors that this component should behave as.
-     *
-     * Child classes may override this method to specify the behaviors they want to behave as.
-     *
-     * The return value of this method should be an array of behavior objects or configurations
-     * indexed by behavior names. A behavior configuration can be either a string specifying
-     * the behavior class or an array of the following structure:
-     *
-     * ~~~
-     * 'behaviorName' => [
-     *     'class' => 'BehaviorClass',
-     *     'property1' => 'value1',
-     *     'property2' => 'value2',
-     * ]
-     * ~~~
-     *
-     * Note that a behavior class must extend from [[Behavior]]. Behavior names can be strings
-     * or integers. If the former, they uniquely identify the behaviors. If the latter, the corresponding
-     * behaviors are anonymous and their properties and methods will NOT be made available via the component
-     * (however, the behaviors can still respond to the component's events).
-     *
-     * Behaviors declared in this method will be attached to the component automatically (on demand).
-     *
-     * @return array the behavior configurations.
-     */
-    public function behaviors()
-    {
-        return [];
-    }
-
-    /**
      * Returns a value indicating whether there is any handler attached to the named event.
      * @param string $name the event name
      * @return boolean whether there is any handler attached to the event.
@@ -442,46 +542,6 @@ class Component extends Object
     {
         $this->ensureBehaviors();
         return !empty($this->_events[$name]) || Event::hasHandlers($this, $name);
-    }
-
-    /**
-     * Attaches an event handler to an event.
-     *
-     * The event handler must be a valid PHP callback. The following are
-     * some examples:
-     *
-     * ~~~
-     * function ($event) { ... }         // anonymous function
-     * [$object, 'handleClick']          // $object->handleClick()
-     * ['Page', 'handleClick']           // Page::handleClick()
-     * 'handleClick'                     // global function handleClick()
-     * ~~~
-     *
-     * The event handler must be defined with the following signature,
-     *
-     * ~~~
-     * function ($event)
-     * ~~~
-     *
-     * where `$event` is an [[Event]] object which includes parameters associated with the event.
-     *
-     * @param string $name the event name
-     * @param callable $handler the event handler
-     * @param mixed $data the data to be passed to the event handler when the event is triggered.
-     * When the event handler is invoked, this data can be accessed via [[Event::data]].
-     * @param boolean $append whether to append new event handler to the end of the existing
-     * handler list. If false, the new handler will be inserted at the beginning of the existing
-     * handler list.
-     * @see off()
-     */
-    public function on($name, $handler, $data = null, $append = true)
-    {
-        $this->ensureBehaviors();
-        if ($append || empty($this->_events[$name])) {
-            $this->_events[$name][] = [$handler, $data];
-        } else {
-            array_unshift($this->_events[$name], [$handler, $data]);
-        }
     }
 
     /**
@@ -571,27 +631,6 @@ class Component extends Object
     }
 
     /**
-     * Attaches a behavior to this component.
-     * This method will create the behavior object based on the given
-     * configuration. After that, the behavior object will be attached to
-     * this component by calling the [[Behavior::attach()]] method.
-     * @param string $name the name of the behavior.
-     * @param string|array|Behavior $behavior the behavior configuration. This can be one of the following:
-     *
-     *  - a [[Behavior]] object
-     *  - a string specifying the behavior class
-     *  - an object configuration array that will be passed to [[Yii::createObject()]] to create the behavior object.
-     *
-     * @return Behavior the behavior object
-     * @see detachBehavior()
-     */
-    public function attachBehavior($name, $behavior)
-    {
-        $this->ensureBehaviors();
-        return $this->attachBehaviorInternal($name, $behavior);
-    }
-
-    /**
      * Attaches a list of behaviors to the component.
      * Each behavior is indexed by its name and should be a [[Behavior]] object,
      * a string specifying the behavior class, or an configuration array for creating the behavior.
@@ -603,6 +642,17 @@ class Component extends Object
         $this->ensureBehaviors();
         foreach ($behaviors as $name => $behavior) {
             $this->attachBehaviorInternal($name, $behavior);
+        }
+    }
+
+    /**
+     * Detaches all behaviors from the component.
+     */
+    public function detachBehaviors()
+    {
+        $this->ensureBehaviors();
+        foreach ($this->_behaviors as $name => $behavior) {
+            $this->detachBehavior($name);
         }
     }
 
@@ -623,55 +673,5 @@ class Component extends Object
         } else {
             return null;
         }
-    }
-
-    /**
-     * Detaches all behaviors from the component.
-     */
-    public function detachBehaviors()
-    {
-        $this->ensureBehaviors();
-        foreach ($this->_behaviors as $name => $behavior) {
-            $this->detachBehavior($name);
-        }
-    }
-
-    /**
-     * Makes sure that the behaviors declared in [[behaviors()]] are attached to this component.
-     */
-    public function ensureBehaviors()
-    {
-        if ($this->_behaviors === null) {
-            $this->_behaviors = [];
-            foreach ($this->behaviors() as $name => $behavior) {
-                $this->attachBehaviorInternal($name, $behavior);
-            }
-        }
-    }
-
-    /**
-     * Attaches a behavior to this component.
-     * @param string|integer $name the name of the behavior. If this is an integer, it means the behavior
-     * is an anonymous one. Otherwise, the behavior is a named one and any existing behavior with the same name
-     * will be detached first.
-     * @param string|array|Behavior $behavior the behavior to be attached
-     * @return Behavior the attached behavior.
-     */
-    private function attachBehaviorInternal($name, $behavior)
-    {
-        if (!($behavior instanceof Behavior)) {
-            $behavior = Yii::createObject($behavior);
-        }
-        if (is_int($name)) {
-            $behavior->attach($this);
-            $this->_behaviors[] = $behavior;
-        } else {
-            if (isset($this->_behaviors[$name])) {
-                $this->_behaviors[$name]->detach();
-            }
-            $behavior->attach($this);
-            $this->_behaviors[$name] = $behavior;
-        }
-        return $behavior;
     }
 }

@@ -82,17 +82,6 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Quotes a table name for use in a query.
-     * A simple table name has no schema prefix.
-     * @param string $name table name
-     * @return string the properly quoted table name
-     */
-    public function quoteSimpleTableName($name)
-    {
-        return strpos($name, '"') !== false ? $name : '"' . $name . '"';
-    }
-
-    /**
      * Quotes a column name for use in a query.
      * A simple column name has no prefix.
      * @param string $name column name
@@ -110,6 +99,51 @@ class Schema extends \yii\db\Schema
     public function createQueryBuilder()
     {
         return new QueryBuilder($this->db);
+    }
+
+    /**
+     * Determines the PDO type for the given PHP data value.
+     * @param mixed $data the data whose PDO type is to be determined
+     * @return integer the PDO type
+     * @see http://www.php.net/manual/en/pdo.constants.php
+     */
+    public function getPdoType($data)
+    {
+        static $typeMap = [
+            // php type => PDO type
+            'boolean' => \PDO::PARAM_INT, // PARAM_BOOL is not supported by CUBRID PDO
+            'integer' => \PDO::PARAM_INT,
+            'string' => \PDO::PARAM_STR,
+            'resource' => \PDO::PARAM_LOB,
+            'NULL' => \PDO::PARAM_NULL,
+        ];
+        $type = gettype($data);
+
+        return isset($typeMap[$type]) ? $typeMap[$type] : \PDO::PARAM_STR;
+    }
+
+    /**
+     * @inheritdoc
+     * @see http://www.cubrid.org/manual/91/en/sql/transaction.html#database-concurrency
+     */
+    public function setTransactionIsolationLevel($level)
+    {
+        // translate SQL92 levels to CUBRID levels:
+        switch ($level) {
+            case Transaction::SERIALIZABLE:
+                $level = '6'; // SERIALIZABLE
+                break;
+            case Transaction::REPEATABLE_READ:
+                $level = '5'; // REPEATABLE READ CLASS with REPEATABLE READ INSTANCES
+                break;
+            case Transaction::READ_COMMITTED:
+                $level = '4'; // REPEATABLE READ CLASS with READ COMMITTED INSTANCES
+                break;
+            case Transaction::READ_UNCOMMITTED:
+                $level = '3'; // REPEATABLE READ CLASS with READ UNCOMMITTED INSTANCES
+                break;
+        }
+        parent::setTransactionIsolationLevel($level);
     }
 
     /**
@@ -162,6 +196,17 @@ class Schema extends \yii\db\Schema
         $table->foreignKeys = array_values($table->foreignKeys);
 
         return $table;
+    }
+
+    /**
+     * Quotes a table name for use in a query.
+     * A simple table name has no schema prefix.
+     * @param string $name table name
+     * @return string the properly quoted table name
+     */
+    public function quoteSimpleTableName($name)
+    {
+        return strpos($name, '"') !== false ? $name : '"' . $name . '"';
     }
 
     /**
@@ -253,50 +298,5 @@ class Schema extends \yii\db\Schema
         }
 
         return $tableNames;
-    }
-
-    /**
-     * Determines the PDO type for the given PHP data value.
-     * @param mixed $data the data whose PDO type is to be determined
-     * @return integer the PDO type
-     * @see http://www.php.net/manual/en/pdo.constants.php
-     */
-    public function getPdoType($data)
-    {
-        static $typeMap = [
-            // php type => PDO type
-            'boolean' => \PDO::PARAM_INT, // PARAM_BOOL is not supported by CUBRID PDO
-            'integer' => \PDO::PARAM_INT,
-            'string' => \PDO::PARAM_STR,
-            'resource' => \PDO::PARAM_LOB,
-            'NULL' => \PDO::PARAM_NULL,
-        ];
-        $type = gettype($data);
-
-        return isset($typeMap[$type]) ? $typeMap[$type] : \PDO::PARAM_STR;
-    }
-
-    /**
-     * @inheritdoc
-     * @see http://www.cubrid.org/manual/91/en/sql/transaction.html#database-concurrency
-     */
-    public function setTransactionIsolationLevel($level)
-    {
-        // translate SQL92 levels to CUBRID levels:
-        switch ($level) {
-            case Transaction::SERIALIZABLE:
-                $level = '6'; // SERIALIZABLE
-                break;
-            case Transaction::REPEATABLE_READ:
-                $level = '5'; // REPEATABLE READ CLASS with REPEATABLE READ INSTANCES
-                break;
-            case Transaction::READ_COMMITTED:
-                $level = '4'; // REPEATABLE READ CLASS with READ COMMITTED INSTANCES
-                break;
-            case Transaction::READ_UNCOMMITTED:
-                $level = '3'; // REPEATABLE READ CLASS with READ UNCOMMITTED INSTANCES
-                break;
-        }
-        parent::setTransactionIsolationLevel($level);
     }
 }

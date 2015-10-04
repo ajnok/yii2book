@@ -112,6 +112,22 @@ class Person extends \Faker\Provider\Person
         'CSc.', 'DrSc.', 'DSc.', 'Ph.D.', 'Th.D.'
     );
 
+    /**
+     * replaced by specific unisex slovakian title
+     */
+    public static function titleFemale()
+    {
+        return static::titleMale();
+    }
+
+    /**
+     * @example 'PhD'
+     */
+    public static function suffix()
+    {
+        return static::randomElement(static::$suffix);
+    }
+
     public function title($gender = null)
     {
         return static::titleMale();
@@ -123,14 +139,6 @@ class Person extends \Faker\Provider\Person
     public static function titleMale()
     {
         return static::randomElement(static::$title);
-    }
-
-    /**
-     * replaced by specific unisex slovakian title
-     */
-    public static function titleFemale()
-    {
-        return static::titleMale();
     }
 
     /**
@@ -156,13 +164,5 @@ class Person extends \Faker\Provider\Person
     public static function lastNameFemale()
     {
         return static::randomElement(static::$lastNameFemale);
-    }
-
-    /**
-     * @example 'PhD'
-     */
-    public static function suffix()
-    {
-        return static::randomElement(static::$suffix);
     }
 }

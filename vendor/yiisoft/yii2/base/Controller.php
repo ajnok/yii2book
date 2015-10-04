@@ -82,28 +82,25 @@ class Controller extends Component implements ViewContextInterface
     }
 
     /**
-     * Declares external actions for the controller.
-     * This method is meant to be overwritten to declare external actions for the controller.
-     * It should return an array, with array keys being action IDs, and array values the corresponding
-     * action class names or action configuration arrays. For example,
-     *
-     * ~~~
-     * return [
-     *     'action1' => 'app\components\Action1',
-     *     'action2' => [
-     *         'class' => 'app\components\Action2',
-     *         'property1' => 'value1',
-     *         'property2' => 'value2',
-     *     ],
-     * ];
-     * ~~~
-     *
-     * [[\Yii::createObject()]] will be used later to create the requested action
-     * using the configuration provided here.
+     * Runs a request specified in terms of a route.
+     * The route can be either an ID of an action within this controller or a complete route consisting
+     * of module IDs, controller ID and action ID. If the route starts with a slash '/', the parsing of
+     * the route will start from the application; otherwise, it will start from the parent module of this controller.
+     * @param string $route the route to be handled, e.g., 'view', 'comment/view', '/admin/comment/view'.
+     * @param array $params the parameters to be passed to the action.
+     * @return mixed the result of the action.
+     * @see runAction()
      */
-    public function actions()
+    public function run($route, $params = [])
     {
-        return [];
+        $pos = strpos($route, '/');
+        if ($pos === false) {
+            return $this->runAction($route, $params);
+        } elseif ($pos > 0) {
+            return $this->module->runAction($route, $params);
+        } else {
+            return Yii::$app->runAction(ltrim($route, '/'), $params);
+        }
     }
 
     /**
@@ -165,40 +162,6 @@ class Controller extends Component implements ViewContextInterface
     }
 
     /**
-     * Runs a request specified in terms of a route.
-     * The route can be either an ID of an action within this controller or a complete route consisting
-     * of module IDs, controller ID and action ID. If the route starts with a slash '/', the parsing of
-     * the route will start from the application; otherwise, it will start from the parent module of this controller.
-     * @param string $route the route to be handled, e.g., 'view', 'comment/view', '/admin/comment/view'.
-     * @param array $params the parameters to be passed to the action.
-     * @return mixed the result of the action.
-     * @see runAction()
-     */
-    public function run($route, $params = [])
-    {
-        $pos = strpos($route, '/');
-        if ($pos === false) {
-            return $this->runAction($route, $params);
-        } elseif ($pos > 0) {
-            return $this->module->runAction($route, $params);
-        } else {
-            return Yii::$app->runAction(ltrim($route, '/'), $params);
-        }
-    }
-
-    /**
-     * Binds the parameters to the action.
-     * This method is invoked by [[Action]] when it begins to run with the given parameters.
-     * @param Action $action the action to be bound with parameters.
-     * @param array $params the parameters to be bound to the action.
-     * @return array the valid parameters that the action can run with.
-     */
-    public function bindActionParams($action, $params)
-    {
-        return [];
-    }
-
-    /**
      * Creates an action based on the given action ID.
      * The method first checks if the action ID has been declared in [[actions()]]. If so,
      * it will use the configuration declared there to create the action object.
@@ -228,6 +191,56 @@ class Controller extends Component implements ViewContextInterface
         }
 
         return null;
+    }
+
+    /**
+     * Declares external actions for the controller.
+     * This method is meant to be overwritten to declare external actions for the controller.
+     * It should return an array, with array keys being action IDs, and array values the corresponding
+     * action class names or action configuration arrays. For example,
+     *
+     * ~~~
+     * return [
+     *     'action1' => 'app\components\Action1',
+     *     'action2' => [
+     *         'class' => 'app\components\Action2',
+     *         'property1' => 'value1',
+     *         'property2' => 'value2',
+     *     ],
+     * ];
+     * ~~~
+     *
+     * [[\Yii::createObject()]] will be used later to create the requested action
+     * using the configuration provided here.
+     */
+    public function actions()
+    {
+        return [];
+    }
+
+    /**
+     * @return string the controller ID that is prefixed with the module ID (if any).
+     */
+    public function getUniqueId()
+    {
+        return $this->module instanceof Application ? $this->id : $this->module->getUniqueId() . '/' . $this->id;
+    }
+
+    /**
+     * Returns all ancestor modules of this controller.
+     * The first module in the array is the outermost one (i.e., the application instance),
+     * while the last is the innermost one.
+     * @return Module[] all ancestor modules that this controller is located within.
+     */
+    public function getModules()
+    {
+        $modules = [$this->module];
+        $module = $this->module;
+        while ($module->module !== null) {
+            array_unshift($modules, $module->module);
+            $module = $module->module;
+        }
+        return $modules;
     }
 
     /**
@@ -294,28 +307,15 @@ class Controller extends Component implements ViewContextInterface
     }
 
     /**
-     * Returns all ancestor modules of this controller.
-     * The first module in the array is the outermost one (i.e., the application instance),
-     * while the last is the innermost one.
-     * @return Module[] all ancestor modules that this controller is located within.
+     * Binds the parameters to the action.
+     * This method is invoked by [[Action]] when it begins to run with the given parameters.
+     * @param Action $action the action to be bound with parameters.
+     * @param array $params the parameters to be bound to the action.
+     * @return array the valid parameters that the action can run with.
      */
-    public function getModules()
+    public function bindActionParams($action, $params)
     {
-        $modules = [$this->module];
-        $module = $this->module;
-        while ($module->module !== null) {
-            array_unshift($modules, $module->module);
-            $module = $module->module;
-        }
-        return $modules;
-    }
-
-    /**
-     * @return string the controller ID that is prefixed with the module ID (if any).
-     */
-    public function getUniqueId()
-    {
-        return $this->module instanceof Application ? $this->id : $this->module->getUniqueId() . '/' . $this->id;
+        return [];
     }
 
     /**
@@ -373,48 +373,6 @@ class Controller extends Component implements ViewContextInterface
     }
 
     /**
-     * Renders a static string by applying a layout.
-     * @param string $content the static string being rendered
-     * @return string the rendering result of the layout with the given static string as the `$content` variable.
-     * If the layout is disabled, the string will be returned back.
-     * @since 2.0.1
-     */
-    public function renderContent($content)
-    {
-        $layoutFile = $this->findLayoutFile($this->getView());
-        if ($layoutFile !== false) {
-            return $this->getView()->renderFile($layoutFile, ['content' => $content], $this);
-        } else {
-            return $content;
-        }
-    }
-
-    /**
-     * Renders a view without applying layout.
-     * This method differs from [[render()]] in that it does not apply any layout.
-     * @param string $view the view name. Please refer to [[render()]] on how to specify a view name.
-     * @param array $params the parameters (name-value pairs) that should be made available in the view.
-     * @return string the rendering result.
-     * @throws InvalidParamException if the view file does not exist.
-     */
-    public function renderPartial($view, $params = [])
-    {
-        return $this->getView()->render($view, $params, $this);
-    }
-
-    /**
-     * Renders a view file.
-     * @param string $file the view file to be rendered. This can be either a file path or a path alias.
-     * @param array $params the parameters (name-value pairs) that should be made available in the view.
-     * @return string the rendering result.
-     * @throws InvalidParamException if the view file does not exist.
-     */
-    public function renderFile($file, $params = [])
-    {
-        return $this->getView()->renderFile($file, $params, $this);
-    }
-
-    /**
      * Returns the view object that can be used to render views or view files.
      * The [[render()]], [[renderPartial()]] and [[renderFile()]] methods will use
      * this view object to implement the actual view rendering.
@@ -439,14 +397,20 @@ class Controller extends Component implements ViewContextInterface
     }
 
     /**
-     * Returns the directory containing view files for this controller.
-     * The default implementation returns the directory named as controller [[id]] under the [[module]]'s
-     * [[viewPath]] directory.
-     * @return string the directory containing the view files for this controller.
+     * Renders a static string by applying a layout.
+     * @param string $content the static string being rendered
+     * @return string the rendering result of the layout with the given static string as the `$content` variable.
+     * If the layout is disabled, the string will be returned back.
+     * @since 2.0.1
      */
-    public function getViewPath()
+    public function renderContent($content)
     {
-        return $this->module->getViewPath() . DIRECTORY_SEPARATOR . $this->id;
+        $layoutFile = $this->findLayoutFile($this->getView());
+        if ($layoutFile !== false) {
+            return $this->getView()->renderFile($layoutFile, ['content' => $content], $this);
+        } else {
+            return $content;
+        }
     }
 
     /**
@@ -491,5 +455,41 @@ class Controller extends Component implements ViewContextInterface
         }
 
         return $path;
+    }
+
+    /**
+     * Renders a view without applying layout.
+     * This method differs from [[render()]] in that it does not apply any layout.
+     * @param string $view the view name. Please refer to [[render()]] on how to specify a view name.
+     * @param array $params the parameters (name-value pairs) that should be made available in the view.
+     * @return string the rendering result.
+     * @throws InvalidParamException if the view file does not exist.
+     */
+    public function renderPartial($view, $params = [])
+    {
+        return $this->getView()->render($view, $params, $this);
+    }
+
+    /**
+     * Renders a view file.
+     * @param string $file the view file to be rendered. This can be either a file path or a path alias.
+     * @param array $params the parameters (name-value pairs) that should be made available in the view.
+     * @return string the rendering result.
+     * @throws InvalidParamException if the view file does not exist.
+     */
+    public function renderFile($file, $params = [])
+    {
+        return $this->getView()->renderFile($file, $params, $this);
+    }
+
+    /**
+     * Returns the directory containing view files for this controller.
+     * The default implementation returns the directory named as controller [[id]] under the [[module]]'s
+     * [[viewPath]] directory.
+     * @return string the directory containing the view files for this controller.
+     */
+    public function getViewPath()
+    {
+        return $this->module->getViewPath() . DIRECTORY_SEPARATOR . $this->id;
     }
 }

@@ -17,11 +17,6 @@ use cebe\markdown\Markdown;
  */
 class MarkdownTest extends BaseMarkdownTest
 {
-	public function createMarkdown()
-	{
-		return new Markdown();
-	}
-
 	public function getDataPaths()
 	{
 		return [
@@ -33,6 +28,11 @@ class MarkdownTest extends BaseMarkdownTest
 	{
 		$this->assertEquals("<p>&amp;</p>\n", $this->createMarkdown()->parse('&'));
 		$this->assertEquals("<p>&lt;</p>\n", $this->createMarkdown()->parse('<'));
+	}
+
+	public function createMarkdown()
+	{
+		return new Markdown();
 	}
 
 	public function testKeepZeroAlive()

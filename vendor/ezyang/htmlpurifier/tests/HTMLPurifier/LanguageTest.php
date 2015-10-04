@@ -8,14 +8,6 @@ class HTMLPurifier_LanguageTest extends HTMLPurifier_Harness
 
     protected $lang;
 
-    protected function generateEnLanguage()
-    {
-        $factory = HTMLPurifier_LanguageFactory::instance();
-        $config = HTMLPurifier_Config::create(array('Core.Language' => 'en'));
-        $context = new HTMLPurifier_Context();
-        return $factory->create($config, $context);
-    }
-
     public function test_getMessage()
     {
         $config = HTMLPurifier_Config::createDefault();
@@ -61,6 +53,14 @@ class HTMLPurifier_LanguageTest extends HTMLPurifier_Harness
         $this->assertEqual($lang->listify(array('Item')), 'Item');
         $this->assertEqual($lang->listify(array('Item', 'Item2')), 'Item and Item2');
         $this->assertEqual($lang->listify(array('Item', 'Item2', 'Item3')), 'Item, Item2 and Item3');
+    }
+
+    protected function generateEnLanguage()
+    {
+        $factory = HTMLPurifier_LanguageFactory::instance();
+        $config = HTMLPurifier_Config::create(array('Core.Language' => 'en'));
+        $context = new HTMLPurifier_Context();
+        return $factory->create($config, $context);
     }
 
     public function test_formatMessage_arrayParameter()

@@ -9,12 +9,11 @@ class HTMLPurifier_AttrDef_HTML_Bool extends HTMLPurifier_AttrDef
     /**
      * @type bool
      */
-    protected $name;
-
+    public $minimized = true;
     /**
      * @type bool
      */
-    public $minimized = true;
+    protected $name;
 
     /**
      * @param bool $name

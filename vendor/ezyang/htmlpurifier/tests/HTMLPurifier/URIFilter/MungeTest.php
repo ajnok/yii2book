@@ -9,19 +9,6 @@ class HTMLPurifier_URIFilter_MungeTest extends HTMLPurifier_URIFilterHarness
         $this->filter = new HTMLPurifier_URIFilter_Munge();
     }
 
-    protected function setMunge($uri = 'http://www.google.com/url?q=%s')
-    {
-        $this->config->set('URI.Munge', $uri);
-    }
-
-    protected function setSecureMunge($key = 'secret')
-    {
-        if (!function_exists('hash_hmac')) return false;
-        $this->setMunge('/redirect.php?url=%s&checksum=%t');
-        $this->config->set('URI.MungeSecretKey', $key);
-        return true;
-    }
-
     public function testMunge()
     {
         $this->setMunge();
@@ -29,6 +16,11 @@ class HTMLPurifier_URIFilter_MungeTest extends HTMLPurifier_URIFilterHarness
             'http://www.example.com/',
             'http://www.google.com/url?q=http%3A%2F%2Fwww.example.com%2F'
         );
+    }
+
+    protected function setMunge($uri = 'http://www.google.com/url?q=%s')
+    {
+        $this->config->set('URI.Munge', $uri);
     }
 
     public function testMungeReplaceTagName()
@@ -96,6 +88,14 @@ class HTMLPurifier_URIFilter_MungeTest extends HTMLPurifier_URIFilterHarness
     {
         if (!$this->setSecureMunge()) return;
         $this->assertFiltering('/local');
+    }
+
+    protected function setSecureMunge($key = 'secret')
+    {
+        if (!function_exists('hash_hmac')) return false;
+        $this->setMunge('/redirect.php?url=%s&checksum=%t');
+        $this->config->set('URI.MungeSecretKey', $key);
+        return true;
     }
 
     public function testSecureMungePreserveEmbedded()

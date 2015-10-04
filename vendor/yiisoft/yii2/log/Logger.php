@@ -108,6 +108,24 @@ class Logger extends Component
      */
     public $dispatcher;
 
+    /**
+     * Returns the text display of the specified level.
+     * @param integer $level the message level, e.g. [[LEVEL_ERROR]], [[LEVEL_WARNING]].
+     * @return string the text display of the level
+     */
+    public static function getLevelName($level)
+    {
+        static $levels = [
+            self::LEVEL_ERROR => 'error',
+            self::LEVEL_WARNING => 'warning',
+            self::LEVEL_INFO => 'info',
+            self::LEVEL_TRACE => 'trace',
+            self::LEVEL_PROFILE_BEGIN => 'profile begin',
+            self::LEVEL_PROFILE_END => 'profile end',
+        ];
+
+        return isset($levels[$level]) ? $levels[$level] : 'unknown';
+    }
 
     /**
      * Initializes the logger by registering [[flush()]] as a shutdown function.
@@ -122,6 +140,21 @@ class Logger extends Component
             // ensure "flush()" is called last when there are multiple shutdown functions
             register_shutdown_function([$this, 'flush'], true);
         });
+    }
+
+    /**
+     * Flushes log messages from memory to targets.
+     * @param boolean $final whether this is a final call during a request.
+     */
+    public function flush($final = false)
+    {
+        $messages = $this->messages;
+        // https://github.com/yiisoft/yii2/issues/5619
+        // new messages could be logged while the existing ones are being handled by targets
+        $this->messages = [];
+        if ($this->dispatcher instanceof Dispatcher) {
+            $this->dispatcher->dispatch($messages, $final);
+        }
     }
 
     /**
@@ -160,21 +193,6 @@ class Logger extends Component
     }
 
     /**
-     * Flushes log messages from memory to targets.
-     * @param boolean $final whether this is a final call during a request.
-     */
-    public function flush($final = false)
-    {
-        $messages = $this->messages;
-        // https://github.com/yiisoft/yii2/issues/5619
-        // new messages could be logged while the existing ones are being handled by targets
-        $this->messages = [];
-        if ($this->dispatcher instanceof Dispatcher) {
-            $this->dispatcher->dispatch($messages, $final);
-        }
-    }
-
-    /**
      * Returns the total elapsed time since the start of the current request.
      * This method calculates the difference between now and the timestamp
      * defined by constant `YII_BEGIN_TIME` which is evaluated at the beginning
@@ -184,6 +202,25 @@ class Logger extends Component
     public function getElapsedTime()
     {
         return microtime(true) - YII_BEGIN_TIME;
+    }
+
+    /**
+     * Returns the statistical results of DB queries.
+     * The results returned include the number of SQL statements executed and
+     * the total time spent.
+     * @return array the first element indicates the number of SQL statements executed,
+     * and the second element the total time spent in SQL execution.
+     */
+    public function getDbProfiling()
+    {
+        $timings = $this->getProfiling(['yii\db\Command::query', 'yii\db\Command::execute']);
+        $count = count($timings);
+        $time = 0;
+        foreach ($timings as $timing) {
+            $time += $timing['duration'];
+        }
+
+        return [$count, $time];
     }
 
     /**
@@ -239,25 +276,6 @@ class Logger extends Component
     }
 
     /**
-     * Returns the statistical results of DB queries.
-     * The results returned include the number of SQL statements executed and
-     * the total time spent.
-     * @return array the first element indicates the number of SQL statements executed,
-     * and the second element the total time spent in SQL execution.
-     */
-    public function getDbProfiling()
-    {
-        $timings = $this->getProfiling(['yii\db\Command::query', 'yii\db\Command::execute']);
-        $count = count($timings);
-        $time = 0;
-        foreach ($timings as $timing) {
-            $time += $timing['duration'];
-        }
-
-        return [$count, $time];
-    }
-
-    /**
      * Calculates the elapsed time for the given log messages.
      * @param array $messages the log messages obtained from profiling
      * @return array timings. Each element is an array consisting of these elements:
@@ -290,25 +308,5 @@ class Logger extends Component
         ksort($timings);
 
         return array_values($timings);
-    }
-
-
-    /**
-     * Returns the text display of the specified level.
-     * @param integer $level the message level, e.g. [[LEVEL_ERROR]], [[LEVEL_WARNING]].
-     * @return string the text display of the level
-     */
-    public static function getLevelName($level)
-    {
-        static $levels = [
-            self::LEVEL_ERROR => 'error',
-            self::LEVEL_WARNING => 'warning',
-            self::LEVEL_INFO => 'info',
-            self::LEVEL_TRACE => 'trace',
-            self::LEVEL_PROFILE_BEGIN => 'profile begin',
-            self::LEVEL_PROFILE_END => 'profile end',
-        ];
-
-        return isset($levels[$level]) ? $levels[$level] : 'unknown';
     }
 }

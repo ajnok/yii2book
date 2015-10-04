@@ -3,48 +3,13 @@
 class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
 {
 
-    protected function createURI($uri)
-    {
-        $parser = new HTMLPurifier_URIParser();
-        return $parser->parse($uri);
-    }
+    protected $oldRegistry;
 
     public function test_construct()
     {
         $uri1 = new HTMLPurifier_URI('HTTP', 'bob', 'example.com', '23', '/foo', 'bar=2', 'slash');
         $uri2 = new HTMLPurifier_URI('http', 'bob', 'example.com',  23,  '/foo', 'bar=2', 'slash');
         $this->assertIdentical($uri1, $uri2);
-    }
-
-    protected $oldRegistry;
-
-    protected function &setUpSchemeRegistryMock() {
-        $this->oldRegistry = HTMLPurifier_URISchemeRegistry::instance();
-        generate_mock_once('HTMLPurifier_URIScheme');
-        generate_mock_once('HTMLPurifier_URISchemeRegistry');
-        $registry = HTMLPurifier_URISchemeRegistry::instance(
-          new HTMLPurifier_URISchemeRegistryMock()
-        );
-        return $registry;
-    }
-
-    protected function setUpSchemeMock($name)
-    {
-        $registry = $this->setUpSchemeRegistryMock();
-        $scheme_mock = new HTMLPurifier_URISchemeMock();
-        $registry->setReturnValue('getScheme', $scheme_mock, array($name, '*', '*'));
-        return $scheme_mock;
-    }
-
-    protected function setUpNoValidSchemes()
-    {
-        $registry = $this->setUpSchemeRegistryMock();
-        $registry->setReturnValue('getScheme', false, array('*', '*', '*'));
-    }
-
-    protected function tearDownSchemeRegistryMock()
-    {
-        HTMLPurifier_URISchemeRegistry::instance($this->oldRegistry);
     }
 
     public function test_getSchemeObj()
@@ -58,6 +23,35 @@ class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
         $this->tearDownSchemeRegistryMock();
     }
 
+    protected function setUpSchemeMock($name)
+    {
+        $registry = $this->setUpSchemeRegistryMock();
+        $scheme_mock = new HTMLPurifier_URISchemeMock();
+        $registry->setReturnValue('getScheme', $scheme_mock, array($name, '*', '*'));
+        return $scheme_mock;
+    }
+
+    protected function &setUpSchemeRegistryMock() {
+        $this->oldRegistry = HTMLPurifier_URISchemeRegistry::instance();
+        generate_mock_once('HTMLPurifier_URIScheme');
+        generate_mock_once('HTMLPurifier_URISchemeRegistry');
+        $registry = HTMLPurifier_URISchemeRegistry::instance(
+          new HTMLPurifier_URISchemeRegistryMock()
+        );
+        return $registry;
+    }
+
+    protected function createURI($uri)
+    {
+        $parser = new HTMLPurifier_URIParser();
+        return $parser->parse($uri);
+    }
+
+    protected function tearDownSchemeRegistryMock()
+    {
+        HTMLPurifier_URISchemeRegistry::instance($this->oldRegistry);
+    }
+
     public function test_getSchemeObj_invalidScheme()
     {
         $this->setUpNoValidSchemes();
@@ -67,6 +61,12 @@ class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
         $this->assertIdentical($result, false);
 
         $this->tearDownSchemeRegistryMock();
+    }
+
+    protected function setUpNoValidSchemes()
+    {
+        $registry = $this->setUpSchemeRegistryMock();
+        $registry->setReturnValue('getScheme', false, array('*', '*', '*'));
     }
 
     public function test_getSchemaObj_defaultScheme()
@@ -97,19 +97,19 @@ class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
         $this->tearDownSchemeRegistryMock();
     }
 
-    protected function assertToString($expect_uri, $scheme, $userinfo, $host, $port, $path, $query, $fragment)
-    {
-        $uri = new HTMLPurifier_URI($scheme, $userinfo, $host, $port, $path, $query, $fragment);
-        $string = $uri->toString();
-        $this->assertIdentical($string, $expect_uri);
-    }
-
     public function test_toString_full()
     {
         $this->assertToString(
             'http://bob@example.com:300/foo?bar=baz#fragment',
             'http', 'bob', 'example.com', 300, '/foo', 'bar=baz', 'fragment'
         );
+    }
+
+    protected function assertToString($expect_uri, $scheme, $userinfo, $host, $port, $path, $query, $fragment)
+    {
+        $uri = new HTMLPurifier_URI($scheme, $userinfo, $host, $port, $path, $query, $fragment);
+        $string = $uri->toString();
+        $this->assertIdentical($string, $expect_uri);
     }
 
     public function test_toString_scheme()
@@ -152,6 +152,11 @@ class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
         );
     }
 
+    public function test_validate_overlongPort()
+    {
+        $this->assertValidation('http://example.com:65536', 'http://example.com');
+    }
+
     protected function assertValidation($uri, $expect_uri = true)
     {
         if ($expect_uri === true) $expect_uri = $uri;
@@ -163,11 +168,6 @@ class HTMLPurifier_URITest extends HTMLPurifier_URIHarness
             $this->assertTrue($result);
             $this->assertIdentical($uri->toString(), $expect_uri);
         }
-    }
-
-    public function test_validate_overlongPort()
-    {
-        $this->assertValidation('http://example.com:65536', 'http://example.com');
     }
 
     public function test_validate_zeroPort()

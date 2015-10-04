@@ -210,133 +210,160 @@ class Diff_SequenceMatcher
 	}
 
 	/**
-	 * Checks if a particular character is in the junk dictionary
-	 * for the list of junk characters.
-	 * @param $b
-	 * @return boolean True if the character is considered junk. False if not.
+	 * Return a series of nested arrays containing different groups of generated
+	 * opcodes for the differences between the strings with up to $context lines
+	 * of surrounding content.
+	 *
+	 * Essentially what happens here is any big equal blocks of strings are stripped
+	 * out, the smaller subsets of changes are then arranged in to their groups.
+	 * This means that the sequence matcher and diffs do not need to include the full
+	 * content of the different files but can still provide context as to where the
+	 * changes are.
+	 *
+	 * @param int $context The number of lines of context to provide around the groups.
+	 * @return array Nested array of all of the grouped opcodes.
 	 */
-	private function isBJunk($b)
+	public function getGroupedOpcodes($context=3)
 	{
-		if(isset($this->juncDict[$b])) {
-			return true;
+		$opCodes = $this->getOpCodes();
+		if(empty($opCodes)) {
+			$opCodes = array(
+				array(
+					'equal',
+					0,
+					1,
+					0,
+					1
+				)
+			);
 		}
 
-		return false;
+		if($opCodes[0][0] == 'equal') {
+			$opCodes[0] = array(
+				$opCodes[0][0],
+				max($opCodes[0][1], $opCodes[0][2] - $context),
+				$opCodes[0][2],
+				max($opCodes[0][3], $opCodes[0][4] - $context),
+				$opCodes[0][4]
+			);
+		}
+
+		$lastItem = count($opCodes) - 1;
+		if($opCodes[$lastItem][0] == 'equal') {
+			list($tag, $i1, $i2, $j1, $j2) = $opCodes[$lastItem];
+			$opCodes[$lastItem] = array(
+				$tag,
+				$i1,
+				min($i2, $i1 + $context),
+				$j1,
+				min($j2, $j1 + $context)
+			);
+		}
+
+		$maxRange = $context * 2;
+		$groups = array();
+		$group = array();
+		foreach($opCodes as $code) {
+			list($tag, $i1, $i2, $j1, $j2) = $code;
+			if($tag == 'equal' && $i2 - $i1 > $maxRange) {
+				$group[] = array(
+					$tag,
+					$i1,
+					min($i2, $i1 + $context),
+					$j1,
+					min($j2, $j1 + $context)
+				);
+				$groups[] = $group;
+				$group = array();
+				$i1 = max($i1, $i2 - $context);
+				$j1 = max($j1, $j2 - $context);
+			}
+			$group[] = array(
+				$tag,
+				$i1,
+				$i2,
+				$j1,
+				$j2
+			);
+		}
+
+		if(!empty($group) && !(count($group) == 1 && $group[0][0] == 'equal')) {
+			$groups[] = $group;
+		}
+
+		return $groups;
 	}
 
 	/**
-	 * Find the longest matching block in the two sequences, as defined by the
-	 * lower and upper constraints for each sequence. (for the first sequence,
-	 * $alo - $ahi and for the second sequence, $blo - $bhi)
+	 * Return a list of all of the opcodes for the differences between the
+	 * two strings.
 	 *
-	 * Essentially, of all of the maximal matching blocks, return the one that
-	 * startest earliest in $a, and all of those maximal matching blocks that
-	 * start earliest in $a, return the one that starts earliest in $b.
+	 * The nested array returned contains an array describing the opcode
+	 * which includes:
+	 * 0 - The type of tag (as described below) for the opcode.
+	 * 1 - The beginning line in the first sequence.
+	 * 2 - The end line in the first sequence.
+	 * 3 - The beginning line in the second sequence.
+	 * 4 - The end line in the second sequence.
 	 *
-	 * If the junk callback is defined, do the above but with the restriction
-	 * that the junk element appears in the block. Extend it as far as possible
-	 * by matching only junk elements in both $a and $b.
+	 * The different types of tags include:
+	 * replace - The string from $i1 to $i2 in $a should be replaced by
+	 *           the string in $b from $j1 to $j2.
+	 * delete -  The string in $a from $i1 to $j2 should be deleted.
+	 * insert -  The string in $b from $j1 to $j2 should be inserted at
+	 *           $i1 in $a.
+	 * equal  -  The two strings with the specified ranges are equal.
 	 *
-	 * @param int $alo The lower constraint for the first sequence.
-	 * @param int $ahi The upper constraint for the first sequence.
-	 * @param int $blo The lower constraint for the second sequence.
-	 * @param int $bhi The upper constraint for the second sequence.
-	 * @return array Array containing the longest match that includes the starting position in $a, start in $b and the length/size.
+	 * @return array Array of the opcodes describing the differences between the strings.
 	 */
-	public function findLongestMatch($alo, $ahi, $blo, $bhi)
+	public function getOpCodes()
 	{
-		$a = $this->a;
-		$b = $this->b;
+		if(!empty($this->opCodes)) {
+			return $this->opCodes;
+		}
 
-		$bestI = $alo;
-		$bestJ = $blo;
-		$bestSize = 0;
+		$i = 0;
+		$j = 0;
+		$this->opCodes = array();
 
-		$j2Len = array();
-		$nothing = array();
-
-		for($i = $alo; $i < $ahi; ++$i) {
-			$newJ2Len = array();
-			$jDict = $this->arrayGetDefault($this->b2j, $a[$i], $nothing);
-			foreach($jDict as $jKey => $j) {
-				if($j < $blo) {
-					continue;
-				}
-				else if($j >= $bhi) {
-					break;
-				}
-
-				$k = $this->arrayGetDefault($j2Len, $j -1, 0) + 1;
-				$newJ2Len[$j] = $k;
-				if($k > $bestSize) {
-					$bestI = $i - $k + 1;
-					$bestJ = $j - $k + 1;
-					$bestSize = $k;
-				}
+		$blocks = $this->getMatchingBlocks();
+		foreach($blocks as $block) {
+			list($ai, $bj, $size) = $block;
+			$tag = '';
+			if($i < $ai && $j < $bj) {
+				$tag = 'replace';
+			}
+			else if($i < $ai) {
+				$tag = 'delete';
+			}
+			else if($j < $bj) {
+				$tag = 'insert';
 			}
 
-			$j2Len = $newJ2Len;
+			if($tag) {
+				$this->opCodes[] = array(
+					$tag,
+					$i,
+					$ai,
+					$j,
+					$bj
+				);
+			}
+
+			$i = $ai + $size;
+			$j = $bj + $size;
+
+			if($size) {
+				$this->opCodes[] = array(
+					'equal',
+					$ai,
+					$i,
+					$bj,
+					$j
+				);
+			}
 		}
-
-		while($bestI > $alo && $bestJ > $blo && !$this->isBJunk($b[$bestJ - 1]) &&
-			!$this->linesAreDifferent($bestI - 1, $bestJ - 1)) {
-				--$bestI;
-				--$bestJ;
-				++$bestSize;
-		}
-
-		while($bestI + $bestSize < $ahi && ($bestJ + $bestSize) < $bhi &&
-			!$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
-				++$bestSize;
-		}
-
-		while($bestI > $alo && $bestJ > $blo && $this->isBJunk($b[$bestJ - 1]) &&
-			!$this->isLineDifferent($bestI - 1, $bestJ - 1)) {
-				--$bestI;
-				--$bestJ;
-				++$bestSize;
-		}
-
-		while($bestI + $bestSize < $ahi && $bestJ + $bestSize < $bhi &&
-			$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
-					++$bestSize;
-		}
-
-		return array(
-			$bestI,
-			$bestJ,
-			$bestSize
-		);
-	}
-
-	/**
-	 * Check if the two lines at the given indexes are different or not.
-	 *
-	 * @param int $aIndex Line number to check against in a.
-	 * @param int $bIndex Line number to check against in b.
-	 * @return boolean True if the lines are different and false if not.
-	 */
-	public function linesAreDifferent($aIndex, $bIndex)
-	{
-		$lineA = $this->a[$aIndex];
-		$lineB = $this->b[$bIndex];
-
-		if($this->options['ignoreWhitespace']) {
-			$replace = array("\t", ' ');
-			$lineA = str_replace($replace, '', $lineA);
-			$lineB = str_replace($replace, '', $lineB);
-		}
-
-		if($this->options['ignoreCase']) {
-			$lineA = strtolower($lineA);
-			$lineB = strtolower($lineB);
-		}
-
-		if($lineA != $lineB) {
-			return true;
-		}
-
-		return false;
+		return $this->opCodes;
 	}
 
 	/**
@@ -439,160 +466,153 @@ class Diff_SequenceMatcher
 	}
 
 	/**
-	 * Return a list of all of the opcodes for the differences between the
-	 * two strings.
+	 * Find the longest matching block in the two sequences, as defined by the
+	 * lower and upper constraints for each sequence. (for the first sequence,
+	 * $alo - $ahi and for the second sequence, $blo - $bhi)
 	 *
-	 * The nested array returned contains an array describing the opcode
-	 * which includes:
-	 * 0 - The type of tag (as described below) for the opcode.
-	 * 1 - The beginning line in the first sequence.
-	 * 2 - The end line in the first sequence.
-	 * 3 - The beginning line in the second sequence.
-	 * 4 - The end line in the second sequence.
+	 * Essentially, of all of the maximal matching blocks, return the one that
+	 * startest earliest in $a, and all of those maximal matching blocks that
+	 * start earliest in $a, return the one that starts earliest in $b.
 	 *
-	 * The different types of tags include:
-	 * replace - The string from $i1 to $i2 in $a should be replaced by
-	 *           the string in $b from $j1 to $j2.
-	 * delete -  The string in $a from $i1 to $j2 should be deleted.
-	 * insert -  The string in $b from $j1 to $j2 should be inserted at
-	 *           $i1 in $a.
-	 * equal  -  The two strings with the specified ranges are equal.
+	 * If the junk callback is defined, do the above but with the restriction
+	 * that the junk element appears in the block. Extend it as far as possible
+	 * by matching only junk elements in both $a and $b.
 	 *
-	 * @return array Array of the opcodes describing the differences between the strings.
+	 * @param int $alo The lower constraint for the first sequence.
+	 * @param int $ahi The upper constraint for the first sequence.
+	 * @param int $blo The lower constraint for the second sequence.
+	 * @param int $bhi The upper constraint for the second sequence.
+	 * @return array Array containing the longest match that includes the starting position in $a, start in $b and the length/size.
 	 */
-	public function getOpCodes()
+	public function findLongestMatch($alo, $ahi, $blo, $bhi)
 	{
-		if(!empty($this->opCodes)) {
-			return $this->opCodes;
+		$a = $this->a;
+		$b = $this->b;
+
+		$bestI = $alo;
+		$bestJ = $blo;
+		$bestSize = 0;
+
+		$j2Len = array();
+		$nothing = array();
+
+		for($i = $alo; $i < $ahi; ++$i) {
+			$newJ2Len = array();
+			$jDict = $this->arrayGetDefault($this->b2j, $a[$i], $nothing);
+			foreach($jDict as $jKey => $j) {
+				if($j < $blo) {
+					continue;
+				}
+				else if($j >= $bhi) {
+					break;
+				}
+
+				$k = $this->arrayGetDefault($j2Len, $j -1, 0) + 1;
+				$newJ2Len[$j] = $k;
+				if($k > $bestSize) {
+					$bestI = $i - $k + 1;
+					$bestJ = $j - $k + 1;
+					$bestSize = $k;
+				}
+			}
+
+			$j2Len = $newJ2Len;
 		}
 
-		$i = 0;
-		$j = 0;
-		$this->opCodes = array();
-
-		$blocks = $this->getMatchingBlocks();
-		foreach($blocks as $block) {
-			list($ai, $bj, $size) = $block;
-			$tag = '';
-			if($i < $ai && $j < $bj) {
-				$tag = 'replace';
-			}
-			else if($i < $ai) {
-				$tag = 'delete';
-			}
-			else if($j < $bj) {
-				$tag = 'insert';
-			}
-
-			if($tag) {
-				$this->opCodes[] = array(
-					$tag,
-					$i,
-					$ai,
-					$j,
-					$bj
-				);
-			}
-
-			$i = $ai + $size;
-			$j = $bj + $size;
-
-			if($size) {
-				$this->opCodes[] = array(
-					'equal',
-					$ai,
-					$i,
-					$bj,
-					$j
-				);
-			}
+		while($bestI > $alo && $bestJ > $blo && !$this->isBJunk($b[$bestJ - 1]) &&
+			!$this->linesAreDifferent($bestI - 1, $bestJ - 1)) {
+				--$bestI;
+				--$bestJ;
+				++$bestSize;
 		}
-		return $this->opCodes;
+
+		while($bestI + $bestSize < $ahi && ($bestJ + $bestSize) < $bhi &&
+			!$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
+				++$bestSize;
+		}
+
+		while($bestI > $alo && $bestJ > $blo && $this->isBJunk($b[$bestJ - 1]) &&
+			!$this->isLineDifferent($bestI - 1, $bestJ - 1)) {
+				--$bestI;
+				--$bestJ;
+				++$bestSize;
+		}
+
+		while($bestI + $bestSize < $ahi && $bestJ + $bestSize < $bhi &&
+			$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
+					++$bestSize;
+		}
+
+		return array(
+			$bestI,
+			$bestJ,
+			$bestSize
+		);
 	}
 
 	/**
-	 * Return a series of nested arrays containing different groups of generated
-	 * opcodes for the differences between the strings with up to $context lines
-	 * of surrounding content.
+	 * Helper function that provides the ability to return the value for a key
+	 * in an array of it exists, or if it doesn't then return a default value.
+	 * Essentially cleaner than doing a series of if(isset()) {} else {} calls.
 	 *
-	 * Essentially what happens here is any big equal blocks of strings are stripped
-	 * out, the smaller subsets of changes are then arranged in to their groups.
-	 * This means that the sequence matcher and diffs do not need to include the full
-	 * content of the different files but can still provide context as to where the
-	 * changes are.
-	 *
-	 * @param int $context The number of lines of context to provide around the groups.
-	 * @return array Nested array of all of the grouped opcodes.
+	 * @param array $array The array to search.
+	 * @param string $key The key to check that exists.
+	 * @param mixed $default The value to return as the default value if the key doesn't exist.
+	 * @return mixed The value from the array if the key exists or otherwise the default.
 	 */
-	public function getGroupedOpcodes($context=3)
+	private function arrayGetDefault($array, $key, $default)
 	{
-		$opCodes = $this->getOpCodes();
-		if(empty($opCodes)) {
-			$opCodes = array(
-				array(
-					'equal',
-					0,
-					1,
-					0,
-					1
-				)
-			);
+		if(isset($array[$key])) {
+			return $array[$key];
+		}
+		else {
+			return $default;
+		}
+	}
+
+	/**
+	 * Checks if a particular character is in the junk dictionary
+	 * for the list of junk characters.
+	 * @param $b
+	 * @return boolean True if the character is considered junk. False if not.
+	 */
+	private function isBJunk($b)
+	{
+		if(isset($this->juncDict[$b])) {
+			return true;
 		}
 
-		if($opCodes[0][0] == 'equal') {
-			$opCodes[0] = array(
-				$opCodes[0][0],
-				max($opCodes[0][1], $opCodes[0][2] - $context),
-				$opCodes[0][2],
-				max($opCodes[0][3], $opCodes[0][4] - $context),
-				$opCodes[0][4]
-			);
+		return false;
+	}
+
+	/**
+	 * Check if the two lines at the given indexes are different or not.
+	 *
+	 * @param int $aIndex Line number to check against in a.
+	 * @param int $bIndex Line number to check against in b.
+	 * @return boolean True if the lines are different and false if not.
+	 */
+	public function linesAreDifferent($aIndex, $bIndex)
+	{
+		$lineA = $this->a[$aIndex];
+		$lineB = $this->b[$bIndex];
+
+		if($this->options['ignoreWhitespace']) {
+			$replace = array("\t", ' ');
+			$lineA = str_replace($replace, '', $lineA);
+			$lineB = str_replace($replace, '', $lineB);
 		}
 
-		$lastItem = count($opCodes) - 1;
-		if($opCodes[$lastItem][0] == 'equal') {
-			list($tag, $i1, $i2, $j1, $j2) = $opCodes[$lastItem];
-			$opCodes[$lastItem] = array(
-				$tag,
-				$i1,
-				min($i2, $i1 + $context),
-				$j1,
-				min($j2, $j1 + $context)
-			);
+		if($this->options['ignoreCase']) {
+			$lineA = strtolower($lineA);
+			$lineB = strtolower($lineB);
 		}
 
-		$maxRange = $context * 2;
-		$groups = array();
-		$group = array();
-		foreach($opCodes as $code) {
-			list($tag, $i1, $i2, $j1, $j2) = $code;
-			if($tag == 'equal' && $i2 - $i1 > $maxRange) {
-				$group[] = array(
-					$tag,
-					$i1,
-					min($i2, $i1 + $context),
-					$j1,
-					min($j2, $j1 + $context)
-				);
-				$groups[] = $group;
-				$group = array();
-				$i1 = max($i1, $i2 - $context);
-				$j1 = max($j1, $j2 - $context);
-			}
-			$group[] = array(
-				$tag,
-				$i1,
-				$i2,
-				$j1,
-				$j2
-			);
+		if($lineA != $lineB) {
+			return true;
 		}
 
-		if(!empty($group) && !(count($group) == 1 && $group[0][0] == 'equal')) {
-			$groups[] = $group;
-		}
-
-		return $groups;
+		return false;
 	}
 
 	/**
@@ -613,6 +633,24 @@ class Diff_SequenceMatcher
 	{
 		$matches = array_reduce($this->getMatchingBlocks(), array($this, 'ratioReduce'), 0);
 		return $this->calculateRatio($matches, count ($this->a) + count ($this->b));
+	}
+
+	/**
+	 * Helper function for calculating the ratio to measure similarity for the strings.
+	 * The ratio is defined as being 2 * (number of matches / total length)
+	 *
+	 * @param int $matches The number of matches in the two strings.
+	 * @param int $length The length of the two strings.
+	 * @return float The calculated ratio.
+	 */
+	private function calculateRatio($matches, $length=0)
+	{
+		if($length) {
+			return 2 * ($matches / $length);
+		}
+		else {
+			return 1;
+		}
 	}
 
 	/**
@@ -676,44 +714,6 @@ class Diff_SequenceMatcher
 		$bLength = count ($this->b);
 
 		return $this->calculateRatio(min($aLength, $bLength), $aLength + $bLength);
-	}
-
-	/**
-	 * Helper function for calculating the ratio to measure similarity for the strings.
-	 * The ratio is defined as being 2 * (number of matches / total length)
-	 *
-	 * @param int $matches The number of matches in the two strings.
-	 * @param int $length The length of the two strings.
-	 * @return float The calculated ratio.
-	 */
-	private function calculateRatio($matches, $length=0)
-	{
-		if($length) {
-			return 2 * ($matches / $length);
-		}
-		else {
-			return 1;
-		}
-	}
-
-	/**
-	 * Helper function that provides the ability to return the value for a key
-	 * in an array of it exists, or if it doesn't then return a default value.
-	 * Essentially cleaner than doing a series of if(isset()) {} else {} calls.
-	 *
-	 * @param array $array The array to search.
-	 * @param string $key The key to check that exists.
-	 * @param mixed $default The value to return as the default value if the key doesn't exist.
-	 * @return mixed The value from the array if the key exists or otherwise the default.
-	 */
-	private function arrayGetDefault($array, $key, $default)
-	{
-		if(isset($array[$key])) {
-			return $array[$key];
-		}
-		else {
-			return $default;
-		}
 	}
 
 	/**

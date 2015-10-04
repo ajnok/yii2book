@@ -93,19 +93,6 @@ class Debugger
         $this->paint($mixed);
     }
 
-    public function paintWhen($mixed, $scopes = array())
-    {
-        if (!$this->isInScopes($scopes)) return;
-        $this->paint($mixed);
-    }
-
-    public function paintIfWhen($mixed, $conditional, $scopes = array())
-    {
-        if (!$conditional) return;
-        if (!$this->isInScopes($scopes)) return;
-        $this->paint($mixed);
-    }
-
     public function paint($mixed)
     {
         $this->paints++;
@@ -114,23 +101,10 @@ class Debugger
         if($this->add_pre) echo '</pre>';
     }
 
-    public function addScope($id = false)
+    public function paintWhen($mixed, $scopes = array())
     {
-        if ($id == false) {
-            $id = $this->scope_nextID++;
-        }
-        $this->current_scopes[$id] = true;
-    }
-
-    public function removeScope($id)
-    {
-        if (isset($this->current_scopes[$id])) unset($this->current_scopes[$id]);
-    }
-
-    public function resetScopes()
-    {
-        $this->current_scopes = array();
-        $this->scope_nextID = 1;
+        if (!$this->isInScopes($scopes)) return;
+        $this->paint($mixed);
     }
 
     public function isInScopes($scopes = array())
@@ -157,6 +131,32 @@ class Debugger
             }
         }
         return true;
+    }
+
+    public function paintIfWhen($mixed, $conditional, $scopes = array())
+    {
+        if (!$conditional) return;
+        if (!$this->isInScopes($scopes)) return;
+        $this->paint($mixed);
+    }
+
+    public function addScope($id = false)
+    {
+        if ($id == false) {
+            $id = $this->scope_nextID++;
+        }
+        $this->current_scopes[$id] = true;
+    }
+
+    public function removeScope($id)
+    {
+        if (isset($this->current_scopes[$id])) unset($this->current_scopes[$id]);
+    }
+
+    public function resetScopes()
+    {
+        $this->current_scopes = array();
+        $this->scope_nextID = 1;
     }
 
 }

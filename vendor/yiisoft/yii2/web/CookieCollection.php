@@ -79,17 +79,6 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
-     * Returns the cookie with the specified name.
-     * @param string $name the cookie name
-     * @return Cookie the cookie with the specified name. Null if the named cookie does not exist.
-     * @see getValue()
-     */
-    public function get($name)
-    {
-        return isset($this->_cookies[$name]) ? $this->_cookies[$name] : null;
-    }
-
-    /**
      * Returns the value of the named cookie.
      * @param string $name the cookie name
      * @param mixed $defaultValue the value that should be returned when the named cookie does not exist.
@@ -99,62 +88,6 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function getValue($name, $defaultValue = null)
     {
         return isset($this->_cookies[$name]) ? $this->_cookies[$name]->value : $defaultValue;
-    }
-
-    /**
-     * Returns whether there is a cookie with the specified name.
-     * Note that if a cookie is marked for deletion from browser, this method will return false.
-     * @param string $name the cookie name
-     * @return boolean whether the named cookie exists
-     * @see remove()
-     */
-    public function has($name)
-    {
-        return isset($this->_cookies[$name]) && $this->_cookies[$name]->value !== ''
-            && ($this->_cookies[$name]->expire === null || $this->_cookies[$name]->expire >= time());
-    }
-
-    /**
-     * Adds a cookie to the collection.
-     * If there is already a cookie with the same name in the collection, it will be removed first.
-     * @param Cookie $cookie the cookie to be added
-     * @throws InvalidCallException if the cookie collection is read only
-     */
-    public function add($cookie)
-    {
-        if ($this->readOnly) {
-            throw new InvalidCallException('The cookie collection is read only.');
-        }
-        $this->_cookies[$cookie->name] = $cookie;
-    }
-
-    /**
-     * Removes a cookie.
-     * If `$removeFromBrowser` is true, the cookie will be removed from the browser.
-     * In this case, a cookie with outdated expiry will be added to the collection.
-     * @param Cookie|string $cookie the cookie object or the name of the cookie to be removed.
-     * @param boolean $removeFromBrowser whether to remove the cookie from browser
-     * @throws InvalidCallException if the cookie collection is read only
-     */
-    public function remove($cookie, $removeFromBrowser = true)
-    {
-        if ($this->readOnly) {
-            throw new InvalidCallException('The cookie collection is read only.');
-        }
-        if ($cookie instanceof Cookie) {
-            $cookie->expire = 1;
-            $cookie->value = '';
-        } else {
-            $cookie = new Cookie([
-                'name' => $cookie,
-                'expire' => 1,
-            ]);
-        }
-        if ($removeFromBrowser) {
-            $this->_cookies[$cookie->name] = $cookie;
-        } else {
-            unset($this->_cookies[$cookie->name]);
-        }
     }
 
     /**
@@ -202,6 +135,19 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
+     * Returns whether there is a cookie with the specified name.
+     * Note that if a cookie is marked for deletion from browser, this method will return false.
+     * @param string $name the cookie name
+     * @return boolean whether the named cookie exists
+     * @see remove()
+     */
+    public function has($name)
+    {
+        return isset($this->_cookies[$name]) && $this->_cookies[$name]->value !== ''
+            && ($this->_cookies[$name]->expire === null || $this->_cookies[$name]->expire >= time());
+    }
+
+    /**
      * Returns the cookie with the specified name.
      * This method is required by the SPL interface [[\ArrayAccess]].
      * It is implicitly called when you use something like `$cookie = $collection[$name];`.
@@ -212,6 +158,17 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function offsetGet($name)
     {
         return $this->get($name);
+    }
+
+    /**
+     * Returns the cookie with the specified name.
+     * @param string $name the cookie name
+     * @return Cookie the cookie with the specified name. Null if the named cookie does not exist.
+     * @see getValue()
+     */
+    public function get($name)
+    {
+        return isset($this->_cookies[$name]) ? $this->_cookies[$name] : null;
     }
 
     /**
@@ -228,6 +185,20 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
+     * Adds a cookie to the collection.
+     * If there is already a cookie with the same name in the collection, it will be removed first.
+     * @param Cookie $cookie the cookie to be added
+     * @throws InvalidCallException if the cookie collection is read only
+     */
+    public function add($cookie)
+    {
+        if ($this->readOnly) {
+            throw new InvalidCallException('The cookie collection is read only.');
+        }
+        $this->_cookies[$cookie->name] = $cookie;
+    }
+
+    /**
      * Removes the named cookie.
      * This method is required by the SPL interface [[\ArrayAccess]].
      * It is implicitly called when you use something like `unset($collection[$name])`.
@@ -237,5 +208,34 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function offsetUnset($name)
     {
         $this->remove($name);
+    }
+
+    /**
+     * Removes a cookie.
+     * If `$removeFromBrowser` is true, the cookie will be removed from the browser.
+     * In this case, a cookie with outdated expiry will be added to the collection.
+     * @param Cookie|string $cookie the cookie object or the name of the cookie to be removed.
+     * @param boolean $removeFromBrowser whether to remove the cookie from browser
+     * @throws InvalidCallException if the cookie collection is read only
+     */
+    public function remove($cookie, $removeFromBrowser = true)
+    {
+        if ($this->readOnly) {
+            throw new InvalidCallException('The cookie collection is read only.');
+        }
+        if ($cookie instanceof Cookie) {
+            $cookie->expire = 1;
+            $cookie->value = '';
+        } else {
+            $cookie = new Cookie([
+                'name' => $cookie,
+                'expire' => 1,
+            ]);
+        }
+        if ($removeFromBrowser) {
+            $this->_cookies[$cookie->name] = $cookie;
+        } else {
+            unset($this->_cookies[$cookie->name]);
+        }
     }
 }

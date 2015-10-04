@@ -27,28 +27,6 @@ class m141106_185632_log_init extends Migration
      */
     private $dbTargets = [];
 
-    /**
-     * @throws InvalidConfigException
-     * @return DbTarget[]
-     */
-    protected function getDbTargets()
-    {
-        if ($this->dbTargets === []) {
-            $log = Yii::$app->getLog();
-
-            foreach ($log->targets as $target) {
-                if ($target instanceof DbTarget) {
-                    $this->dbTargets[] = $target;
-                }
-            }
-
-            if ($this->dbTargets === []) {
-                throw new InvalidConfigException('You should configure "log" component to use one or more database targets before executing this migration.');
-            }
-        }
-        return $this->dbTargets;
-    }
-
     public function up()
     {
         $targets = $this->getDbTargets();
@@ -73,6 +51,28 @@ class m141106_185632_log_init extends Migration
             $this->createIndex('idx_log_level', $target->logTable, 'level');
             $this->createIndex('idx_log_category', $target->logTable, 'category');
         }
+    }
+
+    /**
+     * @throws InvalidConfigException
+     * @return DbTarget[]
+     */
+    protected function getDbTargets()
+    {
+        if ($this->dbTargets === []) {
+            $log = Yii::$app->getLog();
+
+            foreach ($log->targets as $target) {
+                if ($target instanceof DbTarget) {
+                    $this->dbTargets[] = $target;
+                }
+            }
+
+            if ($this->dbTargets === []) {
+                throw new InvalidConfigException('You should configure "log" component to use one or more database targets before executing this migration.');
+            }
+        }
+        return $this->dbTargets;
     }
 
     public function down()

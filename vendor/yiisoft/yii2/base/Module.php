@@ -151,20 +151,6 @@ class Module extends ServiceLocator
     }
 
     /**
-     * Sets the currently requested instance of this module class.
-     * @param Module|null $instance the currently requested instance of this module class.
-     * If it is null, the instance of the calling class will be removed, if any.
-     */
-    public static function setInstance($instance)
-    {
-        if ($instance === null) {
-            unset(Yii::$app->loadedModules[get_called_class()]);
-        } else {
-            Yii::$app->loadedModules[get_class($instance)] = $instance;
-        }
-    }
-
-    /**
      * Initializes the module.
      *
      * This method is called after the module is created and initialized with property values
@@ -184,13 +170,61 @@ class Module extends ServiceLocator
     }
 
     /**
-     * Returns an ID that uniquely identifies this module among all modules within the current application.
-     * Note that if the module is an application, an empty string will be returned.
-     * @return string the unique ID of the module.
+     * Returns the directory that contains the controller classes according to [[controllerNamespace]].
+     * Note that in order for this method to return a value, you must define
+     * an alias for the root namespace of [[controllerNamespace]].
+     * @return string the directory that contains the controller classes.
+     * @throws InvalidParamException if there is no alias defined for the root namespace of [[controllerNamespace]].
      */
-    public function getUniqueId()
+    public function getControllerPath()
     {
-        return $this->module ? ltrim($this->module->getUniqueId() . '/' . $this->id, '/') : $this->id;
+        return Yii::getAlias('@' . str_replace('\\', '/', $this->controllerNamespace));
+    }
+
+    /**
+     * Returns the directory that contains layout view files for this module.
+     * @return string the root directory of layout files. Defaults to "[[viewPath]]/layouts".
+     */
+    public function getLayoutPath()
+    {
+        if ($this->_layoutPath !== null) {
+            return $this->_layoutPath;
+        } else {
+            return $this->_layoutPath = $this->getViewPath() . DIRECTORY_SEPARATOR . 'layouts';
+        }
+    }
+
+    /**
+     * Sets the directory that contains the layout files.
+     * @param string $path the root directory or path alias of layout files.
+     * @throws InvalidParamException if the directory is invalid
+     */
+    public function setLayoutPath($path)
+    {
+        $this->_layoutPath = Yii::getAlias($path);
+    }
+
+    /**
+     * Returns the directory that contains the view files for this module.
+     * @return string the root directory of view files. Defaults to "[[basePath]]/views".
+     */
+    public function getViewPath()
+    {
+        if ($this->_viewPath !== null) {
+            return $this->_viewPath;
+        } else {
+            return $this->_viewPath = $this->getBasePath() . DIRECTORY_SEPARATOR . 'views';
+        }
+    }
+
+    /**
+     * Sets the directory that contains the view files.
+     * @param string $path the root directory of view files.
+     * @throws InvalidParamException if the directory is invalid
+     */
+    public function setViewPath($path)
+    {
+        $this->_viewPath = Yii::getAlias($path);
     }
 
     /**
@@ -223,64 +257,6 @@ class Module extends ServiceLocator
         } else {
             throw new InvalidParamException("The directory does not exist: $path");
         }
-    }
-
-    /**
-     * Returns the directory that contains the controller classes according to [[controllerNamespace]].
-     * Note that in order for this method to return a value, you must define
-     * an alias for the root namespace of [[controllerNamespace]].
-     * @return string the directory that contains the controller classes.
-     * @throws InvalidParamException if there is no alias defined for the root namespace of [[controllerNamespace]].
-     */
-    public function getControllerPath()
-    {
-        return Yii::getAlias('@' . str_replace('\\', '/', $this->controllerNamespace));
-    }
-
-    /**
-     * Returns the directory that contains the view files for this module.
-     * @return string the root directory of view files. Defaults to "[[basePath]]/views".
-     */
-    public function getViewPath()
-    {
-        if ($this->_viewPath !== null) {
-            return $this->_viewPath;
-        } else {
-            return $this->_viewPath = $this->getBasePath() . DIRECTORY_SEPARATOR . 'views';
-        }
-    }
-
-    /**
-     * Sets the directory that contains the view files.
-     * @param string $path the root directory of view files.
-     * @throws InvalidParamException if the directory is invalid
-     */
-    public function setViewPath($path)
-    {
-        $this->_viewPath = Yii::getAlias($path);
-    }
-
-    /**
-     * Returns the directory that contains layout view files for this module.
-     * @return string the root directory of layout files. Defaults to "[[viewPath]]/layouts".
-     */
-    public function getLayoutPath()
-    {
-        if ($this->_layoutPath !== null) {
-            return $this->_layoutPath;
-        } else {
-            return $this->_layoutPath = $this->getViewPath() . DIRECTORY_SEPARATOR . 'layouts';
-        }
-    }
-
-    /**
-     * Sets the directory that contains the layout files.
-     * @param string $path the root directory or path alias of layout files.
-     * @throws InvalidParamException if the directory is invalid
-     */
-    public function setLayoutPath($path)
-    {
-        $this->_layoutPath = Yii::getAlias($path);
     }
 
     /**
@@ -377,6 +353,20 @@ class Module extends ServiceLocator
             unset($this->_modules[$id]);
         } else {
             $this->_modules[$id] = $module;
+        }
+    }
+
+    /**
+     * Sets the currently requested instance of this module class.
+     * @param Module|null $instance the currently requested instance of this module class.
+     * If it is null, the instance of the calling class will be removed, if any.
+     */
+    public static function setInstance($instance)
+    {
+        if ($instance === null) {
+            unset(Yii::$app->loadedModules[get_called_class()]);
+        } else {
+            Yii::$app->loadedModules[get_class($instance)] = $instance;
         }
     }
 
@@ -572,6 +562,16 @@ class Module extends ServiceLocator
         } else {
             return null;
         }
+    }
+
+    /**
+     * Returns an ID that uniquely identifies this module among all modules within the current application.
+     * Note that if the module is an application, an empty string will be returned.
+     * @return string the unique ID of the module.
+     */
+    public function getUniqueId()
+    {
+        return $this->module ? ltrim($this->module->getUniqueId() . '/' . $this->id, '/') : $this->id;
     }
 
     /**

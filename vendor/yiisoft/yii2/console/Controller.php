@@ -47,21 +47,7 @@ class Controller extends \yii\base\Controller
      * If not set, ANSI color will only be enabled for terminals that support it.
      */
     public $color;
-
-
-    /**
-     * Returns a value indicating whether ANSI color is enabled.
-     *
-     * ANSI color is enabled only if [[color]] is set true or is not set
-     * and the terminal supports ANSI color.
-     *
-     * @param resource $stream the stream to check.
-     * @return boolean Whether to enable ANSI style in output.
-     */
-    public function isColorEnabled($stream = \STDOUT)
-    {
-        return $this->color === null ? Console::streamSupportsAnsiColors($stream) : $this->color;
-    }
+    private $_reflections = [];
 
     /**
      * Runs an action with the specified action ID and parameters.
@@ -89,6 +75,24 @@ class Controller extends \yii\base\Controller
             }
         }
         return parent::runAction($id, $params);
+    }
+
+    /**
+     * Returns the names of valid options for the action (id)
+     * An option requires the existence of a public member variable whose
+     * name is the option name.
+     * Child classes may override this method to specify possible options.
+     *
+     * Note that the values setting via options are not available
+     * until [[beforeAction()]] is being called.
+     *
+     * @param string $actionID the action id of the current request
+     * @return array the names of the options valid for the action
+     */
+    public function options($actionID)
+    {
+        // $actionId might be used in subclasses to provide options specific to action id
+        return ['color', 'interactive'];
     }
 
     /**
@@ -154,6 +158,20 @@ class Controller extends \yii\base\Controller
             $string = Console::ansiFormat($string, $args);
         }
         return $string;
+    }
+
+    /**
+     * Returns a value indicating whether ANSI color is enabled.
+     *
+     * ANSI color is enabled only if [[color]] is set true or is not set
+     * and the terminal supports ANSI color.
+     *
+     * @param resource $stream the stream to check.
+     * @return boolean Whether to enable ANSI style in output.
+     */
+    public function isColorEnabled($stream = \STDOUT)
+    {
+        return $this->color === null ? Console::streamSupportsAnsiColors($stream) : $this->color;
     }
 
     /**
@@ -261,24 +279,6 @@ class Controller extends \yii\base\Controller
     }
 
     /**
-     * Returns the names of valid options for the action (id)
-     * An option requires the existence of a public member variable whose
-     * name is the option name.
-     * Child classes may override this method to specify possible options.
-     *
-     * Note that the values setting via options are not available
-     * until [[beforeAction()]] is being called.
-     *
-     * @param string $actionID the action id of the current request
-     * @return array the names of the options valid for the action
-     */
-    public function options($actionID)
-    {
-        // $actionId might be used in subclasses to provide options specific to action id
-        return ['color', 'interactive'];
-    }
-
-    /**
      * Returns one-line short summary describing this controller.
      *
      * You may override this method to return customized summary.
@@ -289,6 +289,21 @@ class Controller extends \yii\base\Controller
     public function getHelpSummary()
     {
         return $this->parseDocCommentSummary(new \ReflectionClass($this));
+    }
+
+    /**
+     * Returns the first line of docblock.
+     *
+     * @param \Reflector $reflection
+     * @return string
+     */
+    protected function parseDocCommentSummary($reflection)
+    {
+        $docLines = preg_split('~\R~u', $reflection->getDocComment());
+        if (isset($docLines[1])) {
+            return trim($docLines[1], "\t *");
+        }
+        return '';
     }
 
     /**
@@ -304,6 +319,24 @@ class Controller extends \yii\base\Controller
     }
 
     /**
+     * Returns full description from the docblock.
+     *
+     * @param \Reflector $reflection
+     * @return string
+     */
+    protected function parseDocCommentDetail($reflection)
+    {
+        $comment = strtr(trim(preg_replace('/^\s*\**( |\t)?/m', '', trim($reflection->getDocComment(), '/'))), "\r", '');
+        if (preg_match('/^\s*@\w+/m', $comment, $matches, PREG_OFFSET_CAPTURE)) {
+            $comment = trim(substr($comment, 0, $matches[0][1]));
+        }
+        if ($comment !== '') {
+            return rtrim(Console::renderColoredString(Console::markdownToAnsi($comment)));
+        }
+        return '';
+    }
+
+    /**
      * Returns a one-line short summary describing the specified action.
      * @param Action $action action to get summary for
      * @return string a one-line short summary describing the specified action.
@@ -311,6 +344,22 @@ class Controller extends \yii\base\Controller
     public function getActionHelpSummary($action)
     {
         return $this->parseDocCommentSummary($this->getActionMethodReflection($action));
+    }
+
+    /**
+     * @param Action $action
+     * @return \ReflectionMethod
+     */
+    protected function getActionMethodReflection($action)
+    {
+        if (!isset($this->_reflections[$action->id])) {
+            if ($action instanceof InlineAction) {
+                $this->_reflections[$action->id] = new \ReflectionMethod($this, $action->actionMethod);
+            } else {
+                $this->_reflections[$action->id] = new \ReflectionMethod($action, 'run');
+            }
+        }
+        return $this->_reflections[$action->id];
     }
 
     /**
@@ -376,6 +425,32 @@ class Controller extends \yii\base\Controller
     }
 
     /**
+     * Parses the comment block into tags.
+     * @param \Reflector $reflection the comment block
+     * @return array the parsed tags
+     */
+    protected function parseDocCommentTags($reflection)
+    {
+        $comment = $reflection->getDocComment();
+        $comment = "@description \n" . strtr(trim(preg_replace('/^\s*\**( |\t)?/m', '', trim($comment, '/'))), "\r", '');
+        $parts = preg_split('/^\s*@/m', $comment, -1, PREG_SPLIT_NO_EMPTY);
+        $tags = [];
+        foreach ($parts as $part) {
+            if (preg_match('/^(\w+)(.*)/ms', trim($part), $matches)) {
+                $name = $matches[1];
+                if (!isset($tags[$name])) {
+                    $tags[$name] = trim($matches[2]);
+                } elseif (is_array($tags[$name])) {
+                    $tags[$name][] = trim($matches[2]);
+                } else {
+                    $tags[$name] = [$tags[$name], trim($matches[2])];
+                }
+            }
+        }
+        return $tags;
+    }
+
+    /**
      * Returns the help information for the options for the action.
      * The returned value should be an array. The keys are the option names, and the values are
      * the corresponding help information. Each value must be an array of the following structure:
@@ -432,82 +507,5 @@ class Controller extends \yii\base\Controller
             }
         }
         return $options;
-    }
-
-    private $_reflections = [];
-
-    /**
-     * @param Action $action
-     * @return \ReflectionMethod
-     */
-    protected function getActionMethodReflection($action)
-    {
-        if (!isset($this->_reflections[$action->id])) {
-            if ($action instanceof InlineAction) {
-                $this->_reflections[$action->id] = new \ReflectionMethod($this, $action->actionMethod);
-            } else {
-                $this->_reflections[$action->id] = new \ReflectionMethod($action, 'run');
-            }
-        }
-        return $this->_reflections[$action->id];
-    }
-
-    /**
-     * Parses the comment block into tags.
-     * @param \Reflector $reflection the comment block
-     * @return array the parsed tags
-     */
-    protected function parseDocCommentTags($reflection)
-    {
-        $comment = $reflection->getDocComment();
-        $comment = "@description \n" . strtr(trim(preg_replace('/^\s*\**( |\t)?/m', '', trim($comment, '/'))), "\r", '');
-        $parts = preg_split('/^\s*@/m', $comment, -1, PREG_SPLIT_NO_EMPTY);
-        $tags = [];
-        foreach ($parts as $part) {
-            if (preg_match('/^(\w+)(.*)/ms', trim($part), $matches)) {
-                $name = $matches[1];
-                if (!isset($tags[$name])) {
-                    $tags[$name] = trim($matches[2]);
-                } elseif (is_array($tags[$name])) {
-                    $tags[$name][] = trim($matches[2]);
-                } else {
-                    $tags[$name] = [$tags[$name], trim($matches[2])];
-                }
-            }
-        }
-        return $tags;
-    }
-
-    /**
-     * Returns the first line of docblock.
-     *
-     * @param \Reflector $reflection
-     * @return string
-     */
-    protected function parseDocCommentSummary($reflection)
-    {
-        $docLines = preg_split('~\R~u', $reflection->getDocComment());
-        if (isset($docLines[1])) {
-            return trim($docLines[1], "\t *");
-        }
-        return '';
-    }
-
-    /**
-     * Returns full description from the docblock.
-     *
-     * @param \Reflector $reflection
-     * @return string
-     */
-    protected function parseDocCommentDetail($reflection)
-    {
-        $comment = strtr(trim(preg_replace('/^\s*\**( |\t)?/m', '', trim($reflection->getDocComment(), '/'))), "\r", '');
-        if (preg_match('/^\s*@\w+/m', $comment, $matches, PREG_OFFSET_CAPTURE)) {
-            $comment = trim(substr($comment, 0, $matches[0][1]));
-        }
-        if ($comment !== '') {
-            return rtrim(Console::renderColoredString(Console::markdownToAnsi($comment)));
-        }
-        return '';
     }
 }

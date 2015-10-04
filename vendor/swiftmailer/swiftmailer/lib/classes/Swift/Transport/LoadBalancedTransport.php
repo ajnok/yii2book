@@ -16,6 +16,12 @@
 class Swift_Transport_LoadBalancedTransport implements Swift_Transport
 {
     /**
+     * The Transports which are used in rotation.
+     *
+     * @var Swift_Transport[]
+     */
+    protected $_transports = array();
+    /**
      * Transports which are deemed useless.
      *
      * @var Swift_Transport[]
@@ -23,17 +29,20 @@ class Swift_Transport_LoadBalancedTransport implements Swift_Transport
     private $_deadTransports = array();
 
     /**
-     * The Transports which are used in rotation.
-     *
-     * @var Swift_Transport[]
-     */
-    protected $_transports = array();
-
-    /**
      * Creates a new LoadBalancedTransport.
      */
     public function __construct()
     {
+    }
+
+    /**
+     * Get $transports to delegate to.
+     *
+     * @return Swift_Transport[]
+     */
+    public function getTransports()
+    {
+        return array_merge($this->_transports, $this->_deadTransports);
     }
 
     /**
@@ -45,16 +54,6 @@ class Swift_Transport_LoadBalancedTransport implements Swift_Transport
     {
         $this->_transports = $transports;
         $this->_deadTransports = array();
-    }
-
-    /**
-     * Get $transports to delegate to.
-     *
-     * @return Swift_Transport[]
-     */
-    public function getTransports()
-    {
-        return array_merge($this->_transports, $this->_deadTransports);
     }
 
     /**
@@ -125,18 +124,6 @@ class Swift_Transport_LoadBalancedTransport implements Swift_Transport
     }
 
     /**
-     * Register a plugin.
-     *
-     * @param Swift_Events_EventListener $plugin
-     */
-    public function registerPlugin(Swift_Events_EventListener $plugin)
-    {
-        foreach ($this->_transports as $transport) {
-            $transport->registerPlugin($plugin);
-        }
-    }
-
-    /**
      * Rotates the transport list around and returns the first instance.
      *
      * @return Swift_Transport
@@ -161,6 +148,18 @@ class Swift_Transport_LoadBalancedTransport implements Swift_Transport
             } catch (Exception $e) {
             }
             $this->_deadTransports[] = $transport;
+        }
+    }
+
+    /**
+     * Register a plugin.
+     *
+     * @param Swift_Events_EventListener $plugin
+     */
+    public function registerPlugin(Swift_Events_EventListener $plugin)
+    {
+        foreach ($this->_transports as $transport) {
+            $transport->registerPlugin($plugin);
         }
     }
 }

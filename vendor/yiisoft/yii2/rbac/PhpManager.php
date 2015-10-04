@@ -92,6 +92,76 @@ class PhpManager extends BaseManager
     }
 
     /**
+     * Loads authorization data from persistent storage.
+     */
+    protected function load()
+    {
+        $this->children = [];
+        $this->rules = [];
+        $this->assignments = [];
+        $this->items = [];
+
+        $items = $this->loadFromFile($this->itemFile);
+        $itemsMtime = @filemtime($this->itemFile);
+        $assignments = $this->loadFromFile($this->assignmentFile);
+        $assignmentsMtime = @filemtime($this->assignmentFile);
+        $rules = $this->loadFromFile($this->ruleFile);
+
+        foreach ($items as $name => $item) {
+            $class = $item['type'] == Item::TYPE_PERMISSION ? Permission::className() : Role::className();
+
+            $this->items[$name] = new $class([
+                'name' => $name,
+                'description' => isset($item['description']) ? $item['description'] : null,
+                'ruleName' => isset($item['ruleName']) ? $item['ruleName'] : null,
+                'data' => isset($item['data']) ? $item['data'] : null,
+                'createdAt' => $itemsMtime,
+                'updatedAt' => $itemsMtime,
+            ]);
+        }
+
+        foreach ($items as $name => $item) {
+            if (isset($item['children'])) {
+                foreach ($item['children'] as $childName) {
+                    if (isset($this->items[$childName])) {
+                        $this->children[$name][$childName] = $this->items[$childName];
+                    }
+                }
+            }
+        }
+
+        foreach ($assignments as $userId => $roles) {
+            foreach ($roles as $role) {
+                $this->assignments[$userId][$role] = new Assignment([
+                    'userId' => $userId,
+                    'roleName' => $role,
+                    'createdAt' => $assignmentsMtime,
+                ]);
+            }
+        }
+
+        foreach ($rules as $name => $ruleData) {
+            $this->rules[$name] = unserialize($ruleData);
+        }
+    }
+
+    /**
+     * Loads the authorization data from a PHP script file.
+     *
+     * @param string $file the file path.
+     * @return array the authorization data
+     * @see saveToFile()
+     */
+    protected function loadFromFile($file)
+    {
+        if (is_file($file)) {
+            return require($file);
+        } else {
+            return [];
+        }
+    }
+
+    /**
      * @inheritdoc
      */
     public function checkAccess($userId, $permissionName, $params = [])
@@ -202,6 +272,44 @@ class PhpManager extends BaseManager
     }
 
     /**
+     * Saves items data into persistent storage.
+     */
+    protected function saveItems()
+    {
+        $items = [];
+        foreach ($this->items as $name => $item) {
+            /* @var $item Item */
+            $items[$name] = array_filter(
+                [
+                    'type' => $item->type,
+                    'description' => $item->description,
+                    'ruleName' => $item->ruleName,
+                    'data' => $item->data,
+                ]
+            );
+            if (isset($this->children[$name])) {
+                foreach ($this->children[$name] as $child) {
+                    /* @var $child Item */
+                    $items[$name]['children'][] = $child->name;
+                }
+            }
+        }
+        $this->saveToFile($items, $this->itemFile);
+    }
+
+    /**
+     * Saves the authorization data to a PHP script file.
+     *
+     * @param array $data the authorization data
+     * @param string $file the file path.
+     * @see loadFromFile()
+     */
+    protected function saveToFile($data, $file)
+    {
+        file_put_contents($file, "<?php\nreturn " . VarDumper::export($data) . ";\n", LOCK_EX);
+    }
+
+    /**
      * @inheritdoc
      */
     public function removeChild($parent, $child)
@@ -255,6 +363,21 @@ class PhpManager extends BaseManager
             $this->saveAssignments();
             return $this->assignments[$userId][$role->name];
         }
+    }
+
+    /**
+     * Saves assignments data into persistent storage.
+     */
+    protected function saveAssignments()
+    {
+        $assignmentData = [];
+        foreach ($this->assignments as $userId => $assignments) {
+            foreach ($assignments as $name => $assignment) {
+                /* @var $assignment Assignment */
+                $assignmentData[$userId][] = $assignment->roleName;
+            }
+        }
+        $this->saveToFile($assignmentData, $this->assignmentFile);
     }
 
     /**
@@ -312,7 +435,6 @@ class PhpManager extends BaseManager
         return $items;
     }
 
-
     /**
      * @inheritdoc
      */
@@ -352,6 +474,18 @@ class PhpManager extends BaseManager
         $this->rules[$rule->name] = $rule;
         $this->saveRules();
         return true;
+    }
+
+    /**
+     * Saves rules data into persistent storage.
+     */
+    protected function saveRules()
+    {
+        $rules = [];
+        foreach ($this->rules as $name => $rule) {
+            $rules[$name] = serialize($rule);
+        }
+        $this->saveToFile($rules, $this->ruleFile);
     }
 
     /**
@@ -466,19 +600,21 @@ class PhpManager extends BaseManager
     }
 
     /**
-     * @inheritdoc
+     * Saves authorization data into persistent storage.
      */
-    public function removeAllPermissions()
+    protected function save()
     {
-        $this->removeAllItems(Item::TYPE_PERMISSION);
+        $this->saveItems();
+        $this->saveAssignments();
+        $this->saveRules();
     }
 
     /**
      * @inheritdoc
      */
-    public function removeAllRoles()
+    public function removeAllPermissions()
     {
-        $this->removeAllItems(Item::TYPE_ROLE);
+        $this->removeAllItems(Item::TYPE_PERMISSION);
     }
 
     /**
@@ -517,6 +653,14 @@ class PhpManager extends BaseManager
         }
 
         $this->saveItems();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAllRoles()
+    {
+        $this->removeAllItems(Item::TYPE_ROLE);
     }
 
     /**
@@ -625,150 +769,5 @@ class PhpManager extends BaseManager
 
         return true;
 
-    }
-
-    /**
-     * Loads authorization data from persistent storage.
-     */
-    protected function load()
-    {
-        $this->children = [];
-        $this->rules = [];
-        $this->assignments = [];
-        $this->items = [];
-
-        $items = $this->loadFromFile($this->itemFile);
-        $itemsMtime = @filemtime($this->itemFile);
-        $assignments = $this->loadFromFile($this->assignmentFile);
-        $assignmentsMtime = @filemtime($this->assignmentFile);
-        $rules = $this->loadFromFile($this->ruleFile);
-
-        foreach ($items as $name => $item) {
-            $class = $item['type'] == Item::TYPE_PERMISSION ? Permission::className() : Role::className();
-
-            $this->items[$name] = new $class([
-                'name' => $name,
-                'description' => isset($item['description']) ? $item['description'] : null,
-                'ruleName' => isset($item['ruleName']) ? $item['ruleName'] : null,
-                'data' => isset($item['data']) ? $item['data'] : null,
-                'createdAt' => $itemsMtime,
-                'updatedAt' => $itemsMtime,
-            ]);
-        }
-
-        foreach ($items as $name => $item) {
-            if (isset($item['children'])) {
-                foreach ($item['children'] as $childName) {
-                    if (isset($this->items[$childName])) {
-                        $this->children[$name][$childName] = $this->items[$childName];
-                    }
-                }
-            }
-        }
-
-        foreach ($assignments as $userId => $roles) {
-            foreach ($roles as $role) {
-                $this->assignments[$userId][$role] = new Assignment([
-                    'userId' => $userId,
-                    'roleName' => $role,
-                    'createdAt' => $assignmentsMtime,
-                ]);
-            }
-        }
-
-        foreach ($rules as $name => $ruleData) {
-            $this->rules[$name] = unserialize($ruleData);
-        }
-    }
-
-    /**
-     * Saves authorization data into persistent storage.
-     */
-    protected function save()
-    {
-        $this->saveItems();
-        $this->saveAssignments();
-        $this->saveRules();
-    }
-
-    /**
-     * Loads the authorization data from a PHP script file.
-     *
-     * @param string $file the file path.
-     * @return array the authorization data
-     * @see saveToFile()
-     */
-    protected function loadFromFile($file)
-    {
-        if (is_file($file)) {
-            return require($file);
-        } else {
-            return [];
-        }
-    }
-
-    /**
-     * Saves the authorization data to a PHP script file.
-     *
-     * @param array $data the authorization data
-     * @param string $file the file path.
-     * @see loadFromFile()
-     */
-    protected function saveToFile($data, $file)
-    {
-        file_put_contents($file, "<?php\nreturn " . VarDumper::export($data) . ";\n", LOCK_EX);
-    }
-
-    /**
-     * Saves items data into persistent storage.
-     */
-    protected function saveItems()
-    {
-        $items = [];
-        foreach ($this->items as $name => $item) {
-            /* @var $item Item */
-            $items[$name] = array_filter(
-                [
-                    'type' => $item->type,
-                    'description' => $item->description,
-                    'ruleName' => $item->ruleName,
-                    'data' => $item->data,
-                ]
-            );
-            if (isset($this->children[$name])) {
-                foreach ($this->children[$name] as $child) {
-                    /* @var $child Item */
-                    $items[$name]['children'][] = $child->name;
-                }
-            }
-        }
-        $this->saveToFile($items, $this->itemFile);
-    }
-
-    /**
-     * Saves assignments data into persistent storage.
-     */
-    protected function saveAssignments()
-    {
-        $assignmentData = [];
-        foreach ($this->assignments as $userId => $assignments) {
-            foreach ($assignments as $name => $assignment) {
-                /* @var $assignment Assignment */
-                $assignmentData[$userId][] = $assignment->roleName;
-            }
-        }
-        $this->saveToFile($assignmentData, $this->assignmentFile);
-    }
-
-    /**
-     * Saves rules data into persistent storage.
-     */
-    protected function saveRules()
-    {
-        $rules = [];
-        foreach ($this->rules as $name => $rule) {
-            $rules[$name] = serialize($rule);
-        }
-        $this->saveToFile($rules, $this->ruleFile);
     }
 }
