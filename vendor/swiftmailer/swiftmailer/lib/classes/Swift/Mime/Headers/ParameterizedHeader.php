@@ -135,7 +135,7 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
         foreach ($this->_params as $name => $value) {
             if (!is_null($value)) {
                 // Add the parameter
-                $body .= '; '.$this->_createParameter($name, $value);
+                $body .= '; ' . $this->_createParameter($name, $value);
             }
         }
 
@@ -250,8 +250,8 @@ class Swift_Mime_Headers_ParameterizedHeader extends Swift_Mime_Headers_Unstruct
                 // Add the semi-colon separator
                 $tokens[count($tokens) - 1] .= ';';
                 $tokens = array_merge($tokens, $this->generateTokenLines(
-                    ' '.$this->_createParameter($name, $value)
-                    ));
+                    ' ' . $this->_createParameter($name, $value)
+                ));
             }
         }
 

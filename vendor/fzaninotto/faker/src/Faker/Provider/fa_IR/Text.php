@@ -492,8 +492,8 @@ EOT;
      * generates text string in arabic
      *
      * @example 'از تاریخ‌الشعرا را بکوبند روی نبش دیوار کوچه‌شان. تابلوی مدرسه.'
-     * @param  integer                   $maxNbChars
-     * @param  integer                   $indexSize
+     * @param  integer $maxNbChars
+     * @param  integer $indexSize
      * @return string
      * @throws \InvalidArgumentException
      */
@@ -541,6 +541,6 @@ EOT;
         // build result
         $result = implode(' ', $result);
 
-        return $result.'.';
+        return $result . '.';
     }
 }

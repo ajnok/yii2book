@@ -169,7 +169,7 @@ class HTMLPurifier_Language
      */
     public function listify($array)
     {
-        $sep      = $this->getMessage('Item separator');
+        $sep = $this->getMessage('Item separator');
         $sep_last = $this->getMessage('Item separator last');
         $ret = '';
         for ($i = 0, $c = count($array); $i < $c; $i++) {

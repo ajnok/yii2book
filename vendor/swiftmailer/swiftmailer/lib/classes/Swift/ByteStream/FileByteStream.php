@@ -214,7 +214,7 @@ class Swift_ByteStream_FileByteStream extends Swift_ByteStream_AbstractFilterabl
         if (!isset($this->_writer)) {
             if (!$this->_writer = fopen($this->_path, $this->_mode)) {
                 throw new Swift_IoException(
-                    'Unable to open file for writing ['.$this->_path.']'
+                    'Unable to open file for writing [' . $this->_path . ']'
                 );
             }
         }

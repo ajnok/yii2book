@@ -144,7 +144,7 @@ class CookieCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function has($name)
     {
         return isset($this->_cookies[$name]) && $this->_cookies[$name]->value !== ''
-            && ($this->_cookies[$name]->expire === null || $this->_cookies[$name]->expire >= time());
+        && ($this->_cookies[$name]->expire === null || $this->_cookies[$name]->expire >= time());
     }
 
     /**

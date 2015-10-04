@@ -36,15 +36,15 @@ abstract class Swift_Mime_AbstractMimeEntityTest extends \SwiftMailerTestCase
     {
         $encoder = $this->getMock('Swift_Mime_ContentEncoder');
         $encoder->expects($this->any())
-                ->method('getName')
-                ->will($this->returnValue($name));
+            ->method('getName')
+            ->will($this->returnValue($name));
         $encoder->expects($this->any())
-                ->method('encodeString')
-                ->will($this->returnCallback(function () {
-                    $args = func_get_args();
+            ->method('encodeString')
+            ->will($this->returnCallback(function () {
+                $args = func_get_args();
 
-                    return array_shift($args);
-                }));
+                return array_shift($args);
+            }));
 
         return $encoder;
     }
@@ -68,16 +68,16 @@ abstract class Swift_Mime_AbstractMimeEntityTest extends \SwiftMailerTestCase
     {
         $header = $this->getMockery('Swift_Mime_ParameterizedHeader')->shouldIgnoreMissing();
         $header->shouldReceive('getFieldName')
-               ->zeroOrMoreTimes()
-               ->andReturn($name);
+            ->zeroOrMoreTimes()
+            ->andReturn($name);
         $header->shouldReceive('getFieldBodyModel')
-               ->zeroOrMoreTimes()
-               ->andReturn($model);
+            ->zeroOrMoreTimes()
+            ->andReturn($model);
         $header->shouldReceive('getParameter')
-               ->zeroOrMoreTimes()
-               ->andReturnUsing(function ($key) use ($params) {
-                   return $params[$key];
-               });
+            ->zeroOrMoreTimes()
+            ->andReturnUsing(function ($key) use ($params) {
+                return $params[$key];
+            });
 
         return $header;
     }
@@ -396,19 +396,19 @@ abstract class Swift_Mime_AbstractMimeEntityTest extends \SwiftMailerTestCase
         $os = $this->getMockery('Swift_OutputByteStream');
         if (isset($data)) {
             $os->shouldReceive('read')
-               ->zeroOrMoreTimes()
-               ->andReturnUsing(function () use ($data) {
-                   static $first = true;
-                   if (!$first) {
-                       return false;
-                   }
+                ->zeroOrMoreTimes()
+                ->andReturnUsing(function () use ($data) {
+                    static $first = true;
+                    if (!$first) {
+                        return false;
+                    }
 
-                   $first = false;
+                    $first = false;
 
-                   return $data;
-               });
+                    return $data;
+                });
             $os->shouldReceive('setReadPointer')
-              ->zeroOrMoreTimes();
+                ->zeroOrMoreTimes();
         }
 
         return $os;
@@ -498,12 +498,12 @@ abstract class Swift_Mime_AbstractMimeEntityTest extends \SwiftMailerTestCase
         $child = $this->getMockery('Swift_Mime_MimeEntity')->shouldIgnoreMissing();
         if (isset($level)) {
             $child->shouldReceive('getNestingLevel')
-                  ->zeroOrMoreTimes()
-                  ->andReturn($level);
+                ->zeroOrMoreTimes()
+                ->andReturn($level);
         }
         $child->shouldReceive('toString')
-              ->zeroOrMoreTimes()
-              ->andReturn($string);
+            ->zeroOrMoreTimes()
+            ->andReturn($string);
 
         return $child;
     }

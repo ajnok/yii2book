@@ -223,10 +223,10 @@ class Diff_SequenceMatcher
 	 * @param int $context The number of lines of context to provide around the groups.
 	 * @return array Nested array of all of the grouped opcodes.
 	 */
-	public function getGroupedOpcodes($context=3)
+	public function getGroupedOpcodes($context = 3)
 	{
 		$opCodes = $this->getOpCodes();
-		if(empty($opCodes)) {
+		if (empty($opCodes)) {
 			$opCodes = array(
 				array(
 					'equal',
@@ -238,7 +238,7 @@ class Diff_SequenceMatcher
 			);
 		}
 
-		if($opCodes[0][0] == 'equal') {
+		if ($opCodes[0][0] == 'equal') {
 			$opCodes[0] = array(
 				$opCodes[0][0],
 				max($opCodes[0][1], $opCodes[0][2] - $context),
@@ -249,7 +249,7 @@ class Diff_SequenceMatcher
 		}
 
 		$lastItem = count($opCodes) - 1;
-		if($opCodes[$lastItem][0] == 'equal') {
+		if ($opCodes[$lastItem][0] == 'equal') {
 			list($tag, $i1, $i2, $j1, $j2) = $opCodes[$lastItem];
 			$opCodes[$lastItem] = array(
 				$tag,
@@ -263,9 +263,9 @@ class Diff_SequenceMatcher
 		$maxRange = $context * 2;
 		$groups = array();
 		$group = array();
-		foreach($opCodes as $code) {
+		foreach ($opCodes as $code) {
 			list($tag, $i1, $i2, $j1, $j2) = $code;
-			if($tag == 'equal' && $i2 - $i1 > $maxRange) {
+			if ($tag == 'equal' && $i2 - $i1 > $maxRange) {
 				$group[] = array(
 					$tag,
 					$i1,
@@ -287,7 +287,7 @@ class Diff_SequenceMatcher
 			);
 		}
 
-		if(!empty($group) && !(count($group) == 1 && $group[0][0] == 'equal')) {
+		if (!empty($group) && !(count($group) == 1 && $group[0][0] == 'equal')) {
 			$groups[] = $group;
 		}
 
@@ -318,7 +318,7 @@ class Diff_SequenceMatcher
 	 */
 	public function getOpCodes()
 	{
-		if(!empty($this->opCodes)) {
+		if (!empty($this->opCodes)) {
 			return $this->opCodes;
 		}
 
@@ -327,20 +327,18 @@ class Diff_SequenceMatcher
 		$this->opCodes = array();
 
 		$blocks = $this->getMatchingBlocks();
-		foreach($blocks as $block) {
+		foreach ($blocks as $block) {
 			list($ai, $bj, $size) = $block;
 			$tag = '';
-			if($i < $ai && $j < $bj) {
+			if ($i < $ai && $j < $bj) {
 				$tag = 'replace';
-			}
-			else if($i < $ai) {
+			} else if ($i < $ai) {
 				$tag = 'delete';
-			}
-			else if($j < $bj) {
+			} else if ($j < $bj) {
 				$tag = 'insert';
 			}
 
-			if($tag) {
+			if ($tag) {
 				$this->opCodes[] = array(
 					$tag,
 					$i,
@@ -353,7 +351,7 @@ class Diff_SequenceMatcher
 			$i = $ai + $size;
 			$j = $bj + $size;
 
-			if($size) {
+			if ($size) {
 				$this->opCodes[] = array(
 					'equal',
 					$ai,
@@ -496,20 +494,19 @@ class Diff_SequenceMatcher
 		$j2Len = array();
 		$nothing = array();
 
-		for($i = $alo; $i < $ahi; ++$i) {
+		for ($i = $alo; $i < $ahi; ++$i) {
 			$newJ2Len = array();
 			$jDict = $this->arrayGetDefault($this->b2j, $a[$i], $nothing);
-			foreach($jDict as $jKey => $j) {
-				if($j < $blo) {
+			foreach ($jDict as $jKey => $j) {
+				if ($j < $blo) {
 					continue;
-				}
-				else if($j >= $bhi) {
+				} else if ($j >= $bhi) {
 					break;
 				}
 
-				$k = $this->arrayGetDefault($j2Len, $j -1, 0) + 1;
+				$k = $this->arrayGetDefault($j2Len, $j - 1, 0) + 1;
 				$newJ2Len[$j] = $k;
-				if($k > $bestSize) {
+				if ($k > $bestSize) {
 					$bestI = $i - $k + 1;
 					$bestJ = $j - $k + 1;
 					$bestSize = $k;
@@ -519,28 +516,28 @@ class Diff_SequenceMatcher
 			$j2Len = $newJ2Len;
 		}
 
-		while($bestI > $alo && $bestJ > $blo && !$this->isBJunk($b[$bestJ - 1]) &&
+		while ($bestI > $alo && $bestJ > $blo && !$this->isBJunk($b[$bestJ - 1]) &&
 			!$this->linesAreDifferent($bestI - 1, $bestJ - 1)) {
-				--$bestI;
-				--$bestJ;
-				++$bestSize;
+			--$bestI;
+			--$bestJ;
+			++$bestSize;
 		}
 
-		while($bestI + $bestSize < $ahi && ($bestJ + $bestSize) < $bhi &&
+		while ($bestI + $bestSize < $ahi && ($bestJ + $bestSize) < $bhi &&
 			!$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
-				++$bestSize;
+			++$bestSize;
 		}
 
-		while($bestI > $alo && $bestJ > $blo && $this->isBJunk($b[$bestJ - 1]) &&
+		while ($bestI > $alo && $bestJ > $blo && $this->isBJunk($b[$bestJ - 1]) &&
 			!$this->isLineDifferent($bestI - 1, $bestJ - 1)) {
-				--$bestI;
-				--$bestJ;
-				++$bestSize;
+			--$bestI;
+			--$bestJ;
+			++$bestSize;
 		}
 
-		while($bestI + $bestSize < $ahi && $bestJ + $bestSize < $bhi &&
+		while ($bestI + $bestSize < $ahi && $bestJ + $bestSize < $bhi &&
 			$this->isBJunk($b[$bestJ + $bestSize]) && !$this->linesAreDifferent($bestI + $bestSize, $bestJ + $bestSize)) {
-					++$bestSize;
+			++$bestSize;
 		}
 
 		return array(
@@ -562,10 +559,9 @@ class Diff_SequenceMatcher
 	 */
 	private function arrayGetDefault($array, $key, $default)
 	{
-		if(isset($array[$key])) {
+		if (isset($array[$key])) {
 			return $array[$key];
-		}
-		else {
+		} else {
 			return $default;
 		}
 	}
@@ -578,7 +574,7 @@ class Diff_SequenceMatcher
 	 */
 	private function isBJunk($b)
 	{
-		if(isset($this->juncDict[$b])) {
+		if (isset($this->juncDict[$b])) {
 			return true;
 		}
 
@@ -597,18 +593,18 @@ class Diff_SequenceMatcher
 		$lineA = $this->a[$aIndex];
 		$lineB = $this->b[$bIndex];
 
-		if($this->options['ignoreWhitespace']) {
+		if ($this->options['ignoreWhitespace']) {
 			$replace = array("\t", ' ');
 			$lineA = str_replace($replace, '', $lineA);
 			$lineB = str_replace($replace, '', $lineB);
 		}
 
-		if($this->options['ignoreCase']) {
+		if ($this->options['ignoreCase']) {
 			$lineA = strtolower($lineA);
 			$lineB = strtolower($lineB);
 		}
 
-		if($lineA != $lineB) {
+		if ($lineA != $lineB) {
 			return true;
 		}
 
@@ -643,12 +639,11 @@ class Diff_SequenceMatcher
 	 * @param int $length The length of the two strings.
 	 * @return float The calculated ratio.
 	 */
-	private function calculateRatio($matches, $length=0)
+	private function calculateRatio($matches, $length = 0)
 	{
-		if($length) {
+		if ($length) {
 			return 2 * ($matches / $length);
-		}
-		else {
+		} else {
 			return 1;
 		}
 	}

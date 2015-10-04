@@ -495,7 +495,7 @@ class Swift_Signers_DomainKeySigner implements Swift_Signers_HeaderSigner
         $params = array('a' => $this->_hashAlgorithm, 'b' => chunk_split(base64_encode($this->_getEncryptedHash()), 73, ' '), 'c' => $this->_canon, 'd' => $this->_domainName, 'h' => implode(': ', $this->_signedHeaders), 'q' => 'dns', 's' => $this->_selector);
         $string = '';
         foreach ($params as $k => $v) {
-            $string .= $k.'='.$v.'; ';
+            $string .= $k . '=' . $v . '; ';
         }
         $string = trim($string);
         $headers->addTextHeader('DomainKey-Signature', $string);

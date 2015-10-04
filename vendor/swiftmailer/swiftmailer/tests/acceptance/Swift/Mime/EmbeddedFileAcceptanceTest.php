@@ -48,7 +48,7 @@ class Swift_Mime_EmbeddedFileAcceptanceTest extends \PHPUnit_Framework_TestCase
             $this->_contentEncoder,
             $this->_cache,
             $this->_grammar
-            );
+        );
 
         return $entity;
     }

@@ -596,7 +596,7 @@ class Swift_Signers_DKIMSigner implements Swift_Signers_HeaderSigner
                 $name = strtolower(trim($exploded[0]));
                 $value = str_replace("\r\n", '', $exploded[1]);
                 $value = preg_replace("/[ \t][ \t]+/", ' ', $value);
-                $header = $name.':'.trim($value).($is_sig ? '' : "\r\n");
+                $header = $name . ':' . trim($value) . ($is_sig ? '' : "\r\n");
             case 'simple' :
                 // Nothing to do
         }

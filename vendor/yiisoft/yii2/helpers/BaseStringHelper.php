@@ -154,7 +154,7 @@ class BaseStringHelper
         $generator = new \HTMLPurifier_Generator($config, $context);
         return $generator->generateFromTokens($truncated) . $suffix;
     }
-    
+
     /**
      * Truncates a string to the number of words specified.
      *
